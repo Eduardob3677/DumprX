@@ -1,0 +1,6 @@
+aiohttp>=3.8.0
+aiofiles>=23.0.0
+PyYAML>=6.0
+rich>=13.0.0
+click>=8.0.0
+tqdm>=4.64.0
