@@ -88,8 +88,24 @@ echo -e ${BLUE}">> Installing uv for python packages..."${NORMAL}
 sleep 1
 bash -c "$(curl -sL https://astral.sh/uv/install.sh)" || abort "Setup Failed!"
 
+# Install Python dependencies
+echo -e ${BLUE}">> Installing Python dependencies..."${NORMAL}
+sleep 1
+python3 -m pip install --user -r requirements.txt || abort "Setup Failed!"
+
+# Install DumprX package
+echo -e ${BLUE}">> Installing DumprX package..."${NORMAL}
+sleep 1
+python3 -m pip install --user -e . || abort "Setup Failed!"
+
+# Setup external tools
+echo -e ${BLUE}">> Setting up external tools..."${NORMAL}
+sleep 1
+dumprx setup || abort "Setup Failed!"
+
 # Done!
 echo -e ${GREEN}"Setup Complete!"${NORMAL}
+echo -e ${GREEN}"You can now use 'dumprx' command to extract firmware!"${NORMAL}
 
 # Exit
 exit 0
