@@ -1,57 +1,22 @@
-name: Firmware Dump Workflow
+name: DumprX Firmware Extraction
 
 on:
   workflow_dispatch:
     inputs:
       firmware_url:
-        description: 'Firmware URL to dump'
+        description: 'Firmware download URL'
         required: true
         type: string
-      git_provider:
-        description: 'Git provider to upload the dump'
-        required: true
-        type: choice
-        options:
-          - github
-          - gitlab
-        default: github
-      github_token:
-        description: 'GitHub Token (required if using GitHub provider)'
+      upload_to_github:
+        description: 'Upload extracted files to GitHub'
         required: false
-        type: string
-      github_orgname:
-        description: 'GitHub Organization Name (optional, uses username if not provided)'
-        required: false
-        type: string
-      gitlab_token:
-        description: 'GitLab Token (required if using GitLab provider)'
-        required: false
-        type: string
-      gitlab_group:
-        description: 'GitLab Group Name (optional, uses username if not provided)'
-        required: false
-        type: string
-      gitlab_instance:
-        description: 'GitLab Instance URL (default: gitlab.com)'
-        required: false
-        type: string
-        default: 'gitlab.com'
-      telegram_token:
-        description: 'Telegram Bot Token (optional, for notifications)'
-        required: false
-        type: string
-      telegram_chat_id:
-        description: 'Telegram Chat/Channel ID (optional, for notifications)'
-        required: false
-        type: string
-
-env:
-  PUSH_TO_GITLAB: ${{ inputs.git_provider == 'gitlab' }}
+        default: true
+        type: boolean
 
 jobs:
-  dump-firmware:
+  extract:
     runs-on: ubuntu-latest
-    timeout-minutes: 480  # 8 hours timeout for large firmware files
+    timeout-minutes: 480
     
     steps:
     - name: Checkout repository
@@ -70,15 +35,37 @@ jobs:
         sudo apt-get autoremove -y
         sudo apt-get clean
         df -h
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
         
-    - name: Set up Git LFS
-      run: |
-        git lfs install --global
-        
-    - name: Install dependencies
+    - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo chmod +x setup.sh
+        sudo apt-get install -y \
+          p7zip-full \
+          aria2 \
+          wget \
+          curl \
+          git \
+          python3-pip \
+          xz-utils \
+          lz4 \
+          brotli \
+          lzop \
+          cpio \
+          file \
+          xxd
+          
+    - name: Install Python dependencies
+      run: |
+        pip install -r requirements.txt
+        
+    - name: Setup DumprX
+      run: |
+        chmod +x setup.sh
         ./setup.sh
         
     - name: Configure Git
@@ -87,71 +74,44 @@ jobs:
         git config --global user.name "GitHub Action"
         git config --global http.postBuffer 524288000
         
-    - name: Validate inputs
+    - name: Extract firmware
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TG_TOKEN: ${{ secrets.TG_TOKEN }}
+        TG_CHAT: ${{ secrets.TG_CHAT }}
       run: |
-        if [[ "${{ inputs.git_provider }}" == "github" ]]; then
-          if [[ -z "${{ inputs.github_token }}" ]]; then
-            echo "Error: GitHub token is required when using GitHub provider"
-            exit 1
-          fi
-        elif [[ "${{ inputs.git_provider }}" == "gitlab" ]]; then
-          if [[ -z "${{ inputs.gitlab_token }}" ]]; then
-            echo "Error: GitLab token is required when using GitLab provider"
-            exit 1
-          fi
+        python3 dumprx_main.py "${{ github.event.inputs.firmware_url }}"
+        
+    - name: Upload extraction artifacts
+      if: github.event.inputs.upload_to_github == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: extracted-firmware
+        path: out/
+        retention-days: 30
+        
+    - name: Generate extraction report
+      run: |
+        echo "# Firmware Extraction Report" > extraction_report.md
+        echo "" >> extraction_report.md
+        echo "**URL:** ${{ github.event.inputs.firmware_url }}" >> extraction_report.md
+        echo "**Date:** $(date)" >> extraction_report.md
+        echo "**Status:** $([ -d out ] && echo 'Success' || echo 'Failed')" >> extraction_report.md
+        echo "" >> extraction_report.md
+        if [ -d out ]; then
+          echo "## Extracted Files:" >> extraction_report.md
+          find out -type f -name "*.img" -o -name "*.bin" -o -name "*.dat" | head -20 | sed 's/^/- /' >> extraction_report.md
         fi
         
-    - name: Setup authentication tokens
-      run: |
-        # Create token files based on provider selection
-        if [[ "${{ inputs.git_provider }}" == "github" ]]; then
-          echo "${{ inputs.github_token }}" > .github_token
-          if [[ -n "${{ inputs.github_orgname }}" ]]; then
-            echo "${{ inputs.github_orgname }}" > .github_orgname
-          fi
-          # Remove GitLab token file if it exists
-          rm -f .gitlab_token
-        elif [[ "${{ inputs.git_provider }}" == "gitlab" ]]; then
-          echo "${{ inputs.gitlab_token }}" > .gitlab_token
-          if [[ -n "${{ inputs.gitlab_group }}" ]]; then
-            echo "${{ inputs.gitlab_group }}" > .gitlab_group
-          fi
-          if [[ -n "${{ inputs.gitlab_instance }}" ]]; then
-            echo "${{ inputs.gitlab_instance }}" > .gitlab_instance
-          fi
-          # Remove GitHub token file if it exists
-          rm -f .github_token
-        fi
+    - name: Upload report
+      uses: actions/upload-artifact@v4
+      with:
+        name: extraction-report
+        path: extraction_report.md
         
-        # Setup Telegram tokens if provided
-        if [[ -n "${{ inputs.telegram_token }}" ]]; then
-          echo "${{ inputs.telegram_token }}" > .tg_token
-        fi
-        if [[ -n "${{ inputs.telegram_chat_id }}" ]]; then
-          echo "${{ inputs.telegram_chat_id }}" > .tg_chat
-        fi
-        
-    - name: Set PUSH_TO_GITLAB environment variable
-      run: |
-        if [[ "${{ inputs.git_provider }}" == "gitlab" ]]; then
-          echo "PUSH_TO_GITLAB=true" >> $GITHUB_ENV
-        else
-          echo "PUSH_TO_GITLAB=false" >> $GITHUB_ENV
-        fi
-        
-    - name: Run firmware dumper
-      run: |
-        chmod +x dumper.sh
-        ./dumper.sh '${{ inputs.firmware_url }}'
-        
-    - name: Cleanup sensitive files
-      if: always()
-      run: |
-        rm -f .github_token .gitlab_token .tg_token .tg_chat .github_orgname .gitlab_group .gitlab_instance
-        
-    - name: Upload artifacts on failure
+    - name: Upload debug logs on failure
       if: failure()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: debug-logs
         path: |
