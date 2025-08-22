@@ -1,10 +1,10 @@
 """Downloaders package for various file hosting services."""
 
-from .base import BaseDownloader, DownloadResult
-from .mega import MegaDownloader
-from .mediafire import MediaFireDownloader
-from .gdrive import GDriveDownloader
-from .androidfilehost import AndroidFileHostDownloader
+from dumprxbase import BaseDownloader, DownloadResult
+from dumprxmega import MegaDownloader
+from dumprxmediafire import MediaFireDownloader
+from dumprxgdrive import GDriveDownloader
+from dumprxandroidfilehost import AndroidFileHostDownloader
 
 # Downloader registry
 DOWNLOADERS = {
@@ -26,7 +26,7 @@ def get_downloader(url: str, service: str = 'auto') -> BaseDownloader:
     Returns:
         Downloader instance or None if not supported
     """
-    from ..modules.validator import detect_url_service
+    from dumprxmodules.validator import detect_url_service
     
     if service == 'auto':
         service = detect_url_service(url)

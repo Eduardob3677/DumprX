@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Optional, Union
 from dataclasses import dataclass
 
-from ..utils.console import print_info, print_error, ProgressContext
-from ..modules.formatter import format_file_size, sanitize_filename
+from dumprxutils.console import print_info, print_error, ProgressContext
+from dumprxmodules.formatter import format_file_size, sanitize_filename
 
 
 @dataclass

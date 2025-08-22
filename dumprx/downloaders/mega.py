@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Union, Optional, Dict, Any
 from urllib.parse import urlparse, parse_qs
 
-from .base import BaseDownloader, DownloadResult
-from ..utils.console import print_info, print_error, print_warning
+from dumprxbase import BaseDownloader, DownloadResult
+from dumprxutils.console import print_info, print_error, print_warning
 
 
 class MegaDownloader(BaseDownloader):

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Union, List, Optional
 from dataclasses import dataclass
 
-from ..utils.console import print_info, print_error
+from dumprxutils.console import print_info, print_error
 
 
 @dataclass

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Union, Iterator
 from dataclasses import dataclass
 
-from ..modules.formatter import format_file_size, sanitize_filename, sanitize_path
+from dumprxmodules.formatter import format_file_size, sanitize_filename, sanitize_path
 
 
 @dataclass

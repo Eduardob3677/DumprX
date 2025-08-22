@@ -14,9 +14,9 @@ import git
 from git import Repo, InvalidGitRepositoryError
 import requests
 
-from ..core.config import Config
-from ..core.device_info import DeviceInfo
-from .console import print_info, print_error, print_success, print_warning
+from dumprxcore.config import Config
+from dumprxcore.device_info import DeviceInfo
+from dumprxconsole import print_info, print_error, print_success, print_warning
 
 
 @dataclass

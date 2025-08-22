@@ -9,7 +9,7 @@ import unicodedata
 from typing import Optional, Union
 from pathlib import Path
 
-from ..core.device_info import DeviceInfo
+from dumprxcore.device_info import DeviceInfo
 
 
 def format_device_info(device_info: DeviceInfo) -> str:

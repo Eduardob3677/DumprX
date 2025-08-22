@@ -11,7 +11,7 @@ from rich.text import Text
 from rich.prompt import Prompt, Confirm
 from typing import Optional, Any
 
-from ..modules.banner import create_banner, create_usage_banner, create_error_banner, create_success_banner
+from dumprxmodules.banner import create_banner, create_usage_banner, create_error_banner, create_success_banner
 
 # Global console instance
 console = Console()
@@ -168,7 +168,7 @@ def print_table_header(headers: list, widths: list):
         headers: List of header names
         widths: List of column widths
     """
-    from ..modules.formatter import format_table_row
+    from dumprxmodules.formatter import format_table_row
     
     header_row = format_table_row(headers, widths)
     separator = "─" * len(header_row)
@@ -185,7 +185,7 @@ def print_table_row(columns: list, widths: list):
         columns: List of column values
         widths: List of column widths
     """
-    from ..modules.formatter import format_table_row
+    from dumprxmodules.formatter import format_table_row
     
     row = format_table_row(columns, widths)
     console.print(row)

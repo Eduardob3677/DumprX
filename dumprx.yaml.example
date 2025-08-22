@@ -1,0 +1,27 @@
+# DumprX Configuration Example
+# This file shows all available configuration options
+
+git:
+  github_token: null              # GitHub personal access token
+  github_org: null               # GitHub organization name (optional)
+  gitlab_token: null             # GitLab access token
+  gitlab_group: null             # GitLab group name (optional)
+  gitlab_instance: null          # GitLab instance URL (default: https://gitlab.com)
+  push_to_gitlab: false          # Push to GitLab instead of GitHub
+
+telegram:
+  token: null                    # Telegram bot token
+  chat_id: null                  # Telegram chat ID
+  enabled: false                 # Enable Telegram notifications
+
+download:
+  timeout: 300                   # Download timeout in seconds
+  retry_count: 3                 # Number of download retries
+  chunk_size: 8192              # Download chunk size in bytes
+  user_agent: "DumprX/2.0.0"    # User agent for downloads
+
+extraction:
+  preserve_permissions: true     # Preserve file permissions during extraction
+  create_structure_info: true   # Create structure information files
+  extract_recovery: true        # Extract recovery partition
+  extract_dtbo: true            # Extract DTBO partition

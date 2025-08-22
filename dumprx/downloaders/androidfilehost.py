@@ -5,8 +5,8 @@ AndroidFileHost downloader implementation.
 from pathlib import Path
 from typing import Union
 
-from .base import BaseDownloader, DownloadResult
-from ..utils.console import print_info, print_error, print_warning
+from dumprxbase import BaseDownloader, DownloadResult
+from dumprxutils.console import print_info, print_error, print_warning
 
 
 class AndroidFileHostDownloader(BaseDownloader):

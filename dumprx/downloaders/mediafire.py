@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Union
 from urllib.parse import unquote
 
-from .base import BaseDownloader, DownloadResult
-from ..utils.console import print_info, print_error
+from dumprxbase import BaseDownloader, DownloadResult
+from dumprxutils.console import print_info, print_error
 
 
 class MediaFireDownloader(BaseDownloader):

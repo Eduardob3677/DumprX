@@ -5,8 +5,8 @@ LG KDZ firmware extractor.
 from pathlib import Path
 from typing import Union
 
-from .base import BaseExtractor, ExtractionResult
-from ..utils.console import print_info, print_error, print_step, print_warning
+from dumprxbase import BaseExtractor, ExtractionResult
+from dumprxutils.console import print_info, print_error, print_step, print_warning
 
 
 class LGKDZExtractor(BaseExtractor):

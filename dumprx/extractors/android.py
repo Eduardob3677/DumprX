@@ -5,8 +5,8 @@ Android firmware extractor for various Android-specific formats.
 from pathlib import Path
 from typing import Union
 
-from .base import BaseExtractor, ExtractionResult
-from ..utils.console import print_info, print_error, print_step, print_warning
+from dumprxbase import BaseExtractor, ExtractionResult
+from dumprxutils.console import print_info, print_error, print_step, print_warning
 
 
 class AndroidExtractor(BaseExtractor):
@@ -66,7 +66,7 @@ class AndroidExtractor(BaseExtractor):
         try:
             # Import and use the existing sdat2img utility
             # This would integrate with the existing utils/sdat2img.py
-            from ..utils.sdat2img import main as sdat2img_main
+            from dumprxutils.sdat2img import main as sdat2img_main
             
             sdat2img_main(str(transfer_list), str(dat_file), str(output_img))
             
@@ -91,7 +91,7 @@ class AndroidExtractor(BaseExtractor):
         try:
             # Import and use the existing splituapp utility
             # This would integrate with the existing utils/splituapp.py
-            from ..utils.splituapp import extract as splituapp_extract
+            from dumprxutils.splituapp import extract as splituapp_extract
             
             # Change to output directory for extraction
             import os

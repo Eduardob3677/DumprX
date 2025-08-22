@@ -6,8 +6,8 @@ import shutil
 from pathlib import Path
 from typing import Union
 
-from .base import BaseExtractor, ExtractionResult
-from ..utils.console import print_info, print_error, print_step
+from dumprxbase import BaseExtractor, ExtractionResult
+from dumprxutils.console import print_info, print_error, print_step
 
 
 class ArchiveExtractor(BaseExtractor):

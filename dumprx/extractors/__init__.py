@@ -1,9 +1,9 @@
 """Extractors package for various firmware formats."""
 
-from .base import BaseExtractor, ExtractionResult
-from .archive import ArchiveExtractor
-from .android import AndroidExtractor
-from .lg_kdz import LGKDZExtractor
+from dumprxbase import BaseExtractor, ExtractionResult
+from dumprxarchive import ArchiveExtractor
+from dumprxandroid import AndroidExtractor
+from dumprxlg_kdz import LGKDZExtractor
 
 # Extractor registry
 EXTRACTORS = {
@@ -26,7 +26,7 @@ def get_extractor(file_path: str, format_type: str = 'auto') -> BaseExtractor:
     Returns:
         Extractor instance or None if not supported
     """
-    from ..modules.validator import get_file_format_info
+    from dumprxmodules.validator import get_file_format_info
     
     if format_type == 'auto':
         format_info = get_file_format_info(file_path)

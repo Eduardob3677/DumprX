@@ -11,10 +11,10 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from .core.config import Config
-from .utils.console import print_banner, print_error, print_success, print_info
-from .utils.git import GitManager
-from .modules.formatter import format_device_info
+from dumprx.core.config import Config
+from dumprx.utils.console import print_banner, print_error, print_success, print_info
+from dumprx.utils.git import GitManager
+from dumprx.modules.formatter import format_device_info
 
 console = Console()
 
@@ -83,7 +83,7 @@ def dump(ctx, firmware, output, download_only, extract_only, no_git, no_upload):
     - Extracted firmware folder
     - Supported website URL (mega.nz, mediafire, gdrive, androidfilehost)
     """
-    from .core.main import FirmwareDumper
+    from dumprx.core.main import FirmwareDumper
     
     try:
         config = Config.load(ctx.obj.get('config_path'))
@@ -142,7 +142,7 @@ def download(ctx, url, output, service):
     
     Supports: mega.nz, mediafire.com, Google Drive, AndroidFileHost
     """
-    from .downloaders import get_downloader
+    from dumprx.downloaders import get_downloader
     
     try:
         config = Config.load(ctx.obj.get('config_path'))
@@ -279,7 +279,7 @@ def config_set(ctx, key, value):
 @click.pass_context  
 def setup(ctx, force):
     """Setup dependencies and external tools."""
-    from .core.setup import SetupManager
+    from dumprx.core.setup import SetupManager
     
     try:
         config = Config.load(ctx.obj.get('config_path'))
@@ -328,7 +328,7 @@ def setup(ctx, force):
 @click.pass_context
 def test(ctx, download, extract, git, telegram):
     """Test various integrations and functionality."""
-    from .core.testing import TestRunner
+    from dumprx.core.testing import TestRunner
     
     try:
         config = Config.load(ctx.obj.get('config_path'))
@@ -364,7 +364,7 @@ def test(ctx, download, extract, git, telegram):
 @main.command()
 def version():
     """Show version information."""
-    from . import __version__, __description__
+    from dumprx import __version__, __description__
     
     print_banner()
     
