@@ -14,8 +14,7 @@ __pycache__
 utils/oppo_*
 utils/vmlinux*
 
-# Python package artifacts
-dumprx/
+# Python package artifacts  
 *.egg-info/
 build/
 dist/

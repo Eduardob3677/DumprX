@@ -1,0 +1,1 @@
+"""Device module - device detection and configuration"""
