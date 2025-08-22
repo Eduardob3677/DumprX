@@ -32,10 +32,12 @@ fi
 
 # Check dumper script
 echo "3. Checking dumper script..."
-if [[ -f "dumper.sh" && -x "dumper.sh" ]]; then
-    echo "✅ Dumper script exists and is executable"
+if [[ -f "dumprx_main.py" && -x "dumprx_main.py" ]]; then
+    echo "✅ Main dumper script exists and is executable"
+elif command -v dumprx >/dev/null 2>&1; then
+    echo "✅ DumprX package is installed and available"
 else
-    echo "❌ Dumper script not found or not executable"
+    echo "❌ Dumper script not found or DumprX not installed"
     exit 1
 fi
 
