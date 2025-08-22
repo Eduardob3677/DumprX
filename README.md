@@ -2,163 +2,136 @@
 
   <h1>DumprX</h1>
 
-  <h4>Based Upon Phoenix Firmware Dumper from DroidDumps, with some Changes and Improvements</h4>
+  <h4>Modern Python Firmware Dumping and Extraction Toolkit v2.0</h4>
 
 </div>
 
 
 ## What this really is
 
-You might've used firmware extractor via dumpyara from https://github.com/AndroidDumps/. This toolkit is revamped edition of the tools with some improvements and feature additions.
+DumprX is a completely refactored and modernized firmware extraction toolkit, migrated from bash to Python with a professional CLI interface. This toolkit provides comprehensive firmware dumping capabilities with Rich console output, progress bars, and intelligent device detection.
 
-## The improvements over dumpyara
+## The improvements in v2.0
 
-- [x] dumpyara's and firmware_extractor's scripts are merged with handpicked shellcheck-ed and pylint-ed improvements
-- [x] The script can download and dump firmware from different filehosters such as Mega.NZ, Mediafire.com, AndroidFileHost.com and from Google Drive URLs
-- [x] File as-well-as Folder as an input is processed thoroughly to check all kinds of supported firmware types
-- [x] All the external tools are now inherited into one place and unnesessary files removed
-- [x] Binary tools are updated to latest available source
-- [x] LG KDZ utilities are updated to support latest firmwares
-- [x] Installation requirements are narrowed down to minimal for playing with this toolkit
-- [x] Recovery Dump is made too
+- [x] **Complete Python migration** - All bash scripts converted to modern Python with Click CLI
+- [x] **Rich console interface** - Beautiful CLI with colors, emojis, progress bars and panels
+- [x] **Intelligent device detection** - Automatic detection of device information, partitions, and configurations
+- [x] **Modern downloaders** - Support for MEGA, MediaFire, Google Drive, AndroidFileHost with progress tracking
+- [x] **Comprehensive extractors** - Support for all major firmware formats with improved error handling
+- [x] **Git integration** - Automatic repository setup and firmware dump uploads
+- [x] **External tool management** - Automatic cloning and updating of required tools
+- [x] **Modular architecture** - Clean separation into core, downloaders, extractors, modules, and utils
 
-## Recommendations before Playing with Firmware Dumper
+## Requirements
 
-This toolkit can run in any Debian/Ubuntu distribution, Ubuntu Bionic and Focal would be best, other versions are not tested.
+- Python 3.8 or newer
+- Git and Git LFS
+- Standard extraction tools (7z, unrar, etc.)
 
-Support for Alpine Linux is added and tested. You can give it a try.
+## Installation
 
-For any other UNIX Distributions, please refer to internal [Setup File](setup.sh) and install the required programs via their own package manager.
+1. **Clone the repository**:
+```bash
+git clone https://github.com/Eduardob3677/DumprX.git
+cd DumprX
+```
 
-## Prepare toolkit dependencies / requirements
+2. **Run the setup script**:
+```bash
+./setup.sh
+```
 
-To prepare for this toolkit, run [Setup File](setup.sh) at first, which is needed only one time. After that, run [Main Script](dumper.sh) with proper argument.
+3. **Activate the virtual environment**:
+```bash
+source .venv/bin/activate
+```
 
 ## Usage
 
-Run this toolkit with proper firmware file/folder path or URL
+### Command Line Interface
 
 ```bash
-./dumper.sh 'Firmware File/Extracted Folder -OR- Supported Website Link'
+dumprx <firmware_file_or_url> [OPTIONS]
 ```
 
-Help Context:
+### Options
 
-```text
-  >> Supported Websites:
-        1. Directly Accessible Download Link From Any Website
-        2. Filehosters like - mega.nz | mediafire | gdrive | onedrive | androidfilehost
-         >> Must Wrap Website Link Inside Single-quotes ('')
-  >> Supported File Formats For Direct Operation:
-         *.zip | *.rar | *.7z | *.tar | *.tar.gz | *.tgz | *.tar.md5
-         *.ozip | *.ofp | *.ops | *.kdz | ruu_*exe
-         system.new.dat | system.new.dat.br | system.new.dat.xz
-         system.new.img | system.img | system-sign.img | UPDATE.APP
-         *.emmc.img | *.img.ext4 | system.bin | system-p | payload.bin
-         *.nb0 | .*chunk* | *.pac | *super*.img | *system*.sin
+- `-u, --url TEXT` - 🌐 Firmware download URL
+- `-c, --config TEXT` - ⚙️ Configuration file path  
+- `-o, --output TEXT` - 📤 Output directory
+- `-v, --verbose` - 🔍 Verbose output
+- `--github-token TEXT` - 🔐 GitHub token for uploads
+- `--telegram-token TEXT` - 📱 Telegram bot token
+- `--chat-id TEXT` - 💬 Telegram chat ID
+
+### Examples
+
+```bash
+# Extract local firmware file
+dumprx firmware.zip
+
+# Download and extract from URL
+dumprx 'https://example.com/firmware.zip'
+
+# Extract with custom output directory
+dumprx firmware.zip -o /path/to/output
+
+# Verbose extraction with GitHub upload
+dumprx firmware.zip --verbose --github-token ghp_xxxx
+```
+
+## Supported File Formats
+
+- **Archives**: *.zip | *.rar | *.7z | *.tar | *.tar.gz | *.tgz | *.tar.md5
+- **Vendor specific**: *.ozip | *.ofp | *.ops | *.kdz | ruu_*.exe
+- **Android images**: system.new.dat | system.new.dat.br | system.new.dat.xz
+- **System images**: system.new.img | system.img | system-sign.img | UPDATE.APP
+- **Other formats**: *.emmc.img | *.img.ext4 | system.bin | system-p | payload.bin
+- **Special formats**: *.nb0 | .*chunk* | *.pac | *super*.img | *system*.sin
+
+## Supported Download Sources
+
+- **Direct links** from any website
+- **MEGA** (mega.nz)
+- **MediaFire** (mediafire.com)
+- **Google Drive** (drive.google.com)
+- **AndroidFileHost** (androidfilehost.com)
+
+## Project Structure
+
+```
+dumprx/
+├── core/               # Core firmware processing logic
+├── downloaders/        # Download managers for different sources
+├── extractors/         # Firmware format extractors
+├── modules/            # Device detection and Git management  
+├── utils/              # Utilities and external tool management
+├── cli.py             # Main CLI interface
+└── __init__.py        # Package initialization
+
+bin/                   # Binary tools and utilities
+utils/                 # Legacy tools and scripts
+setup.sh              # Installation and setup script
 ```
 
 ## GitHub Actions Workflow Usage
 
-You can now use the automated GitHub Actions workflow to dump firmware automatically in the cloud. This workflow allows you to:
+You can use the automated GitHub Actions workflow to dump firmware in the cloud. The workflow supports the new Python CLI and provides the same functionality with improved error handling and progress reporting.
 
-- Specify a firmware URL to download and dump
-- Choose between GitHub or GitLab as your git provider
-- Configure authentication tokens through the workflow interface
-- Automatically set up Git LFS for large files
+## Credits
 
-### How to use the workflow:
+### Main Scripture Credit
+This toolkit improves upon the original [Dumpyara](https://github.com/AndroidDumps/) and [Phoenix Firmware Dumper](https://github.com/DroidDumps) projects.
 
-1. **Go to the Actions tab** in your GitHub repository
-2. **Select "Firmware Dump Workflow"** from the workflow list
-3. **Click "Run workflow"** button
-4. **Fill in the required parameters:**
-   - **Firmware URL**: Direct download link to the firmware file
-   - **Git Provider**: Choose between `github` or `gitlab`
-   - **Authentication tokens**: Based on your provider selection:
-     - For GitHub: Provide `github_token` and optionally `github_orgname`
-     - For GitLab: Provide `gitlab_token` and optionally `gitlab_group` and `gitlab_instance`
-   - **Optional**: Telegram tokens for notifications
+### Python Migration
+- **DumprX v2.0** - Complete Python migration with modern CLI by DumprX Team
 
-### Workflow Features:
+### External Tools
+All external tools are automatically managed and include:
+- sdat2img.py, unsin, extract-dtb.py, dtc, vmlinux-to-elf
+- ozipdecrypt, ofp extractors, lpunpack, splituapp
+- kdztools, RUU_Decrypt_Tool, pacextractor, and more
 
-- ✅ **Automated dependency installation** using the existing setup.sh script
-- ✅ **Git LFS configuration** for handling large firmware files
-- ✅ **Disk space optimization** by cleaning up unnecessary packages
-- ✅ **8-hour timeout** for large firmware processing
-- ✅ **Automatic cleanup** of sensitive authentication data
-- ✅ **Debug artifacts** uploaded on failure for troubleshooting
-
-### Environment Variables Configured:
-
-The workflow automatically configures the following based on your selections:
-- `PUSH_TO_GITLAB`: Set to `true` when GitLab is selected, `false` for GitHub
-- Git configuration with appropriate user email and name
-- HTTP buffer settings for large file uploads
-
-### Security Notes:
-
-- All authentication tokens are handled securely through GitHub Actions secrets
-- Token files are automatically cleaned up after the workflow completes
-- No sensitive data is logged or stored in artifacts
-
-## How to use it to Upload the Dump in GitHub (Local Setup)
-
-- Copy your GITHUB_TOKEN in a file named .github_token and add your GitHub Organization name in another file named .github_orgname inside the project directory.
-  - If only Token is given but Organization is not, your Git Username will be used.
-- Copy your Telegram Token in a file named .tg_token and Telegram Chat/Channel ID in another file named .tg_chat file if you want to publish the uploading info in Telegram.
-
-## Main Scripture Credit
-
-As mentioned above, this toolkit is entirely focused on improving the Original Firmware Dumper available:  [Dumpyara](https://github.com/AndroidDumps/) [Phoenix Firmware Dumper](https://github.com/DroidDumps)
-
-Credit for those tools goes to everyone whosoever worked hard to put all those programs in one place to make an awesome project.
-
-## Download Utilities Credits
-
-- mega-media-drive_dl.sh (for downloading from mega.nz, mediafire.com, google drive)
-  - shell script, most of it's part belongs to badown by @stck-lzm
-- afh_dl (for downloading from androidfilehosts.com)
-  - python script, by @kade-robertson
-- aria2c
-- wget
-
-## Internal Utilities Credits
-
-- sdat2img.py (system-dat-to-img v1.2, python script)
-  - by @xpirt, @luxi78, @howellzhu
-- simg2img (Android sparse-to-raw images converter, binary built from source)
-  - by @anestisb
-- unsin (Xperia Firmware Unpacker v1.13, binary)
-  - by @IgorEisberg
-- extract\_android\_ota\_payload.py (OTA Payload Extractor, python script)
-  - by @cyxx, with metadata update from [Android's update_engine Git Repository](https://android.googlesource.com/platform/system/update_engine/)
-- extract-dtb.py (dtbs extractor v1.3, python script)
-  - by @PabloCastellano
-- dtc (Device Tree Compiler v1.6, binary built from source)
-  - by kernel.org, from their [dtc Git Repository](https://git.kernel.org/pub/scm/utils/dtc/dtc.git)
-- vmlinux-to-elf and kallsyms_finder (kernel binary to analyzable ELF converter, python scripts)
-  - by @marin-m
-- ozipdecrypt.py (Oppo/Oneplus .ozip Firmware decrypter v1.2, python script)
-  - by @bkerler
-- ofp\_qc\_extract.py and ofp\_mtk\_decrypt.py (Oppo .ofp firmware extractor, python scripts)
-  - by @bkerler
-- opscrypto.py (OnePlus/Oppo ops firmware extractor, python script)
-  - by @bkerler
-- lpunpack (OnePlus/Other super.img unpacker, binary built from source)
-  - by @LonelyFool
-- splituapp.py (UPDATE.APP extractor, python script)
-  - by @superr
-- pacextractor (Extractor of SpreadTrum firmware files with extension pac. See)
-  - by @HemanthJabalpuri
-- nb0-extract (Nokia/Sharp/Infocus/Essential nb0-extract, binary built from source)
-  - by Heineken @Eddie07 / "FIH mobile"
-- kdztools' unkdz.py and undz.py (LG KDZ and DZ Utilities, python scripts)
-  - Originally by IOMonster (thecubed on XDA), Modified by @ehem (Elliott Mitchell) and improved by @steadfasterX
-- RUU\_Decrypt\_Tool (HTC RUU/ROM Decryption Tool v3.6.8, binary)
-  - by @nkk71 and @CaptainThrowback
-- extract-ikconfig (.config file extractor from kernel image, shell script)
-  - From within linux's source code by @torvalds
-- unpackboot.sh (bootimg and ramdisk extractor, modified shell script)
-  - Originally by @xiaolu and @carlitros900, stripped to unpack functionallity, by me @rokibhasansagar
-- twrpdtgen by @SebaUbuntu
+### Download Utilities  
+- AFH downloader, MEGA/MediaFire/GDrive scripts
+- Integrated aria2c and direct download support

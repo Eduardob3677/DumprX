@@ -1,0 +1,9 @@
+include README.md
+include LICENSE
+include setup.sh
+recursive-include bin *
+recursive-include utils *
+recursive-exclude utils *.pyc
+recursive-exclude utils __pycache__
+exclude dumper.sh
+exclude setup_old.sh
