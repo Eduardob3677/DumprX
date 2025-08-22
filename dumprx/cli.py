@@ -1,9 +1,6 @@
-"""
-Modern CLI interface for DumprX.
-"""
-
 import sys
 import argparse
+import asyncio
 from pathlib import Path
 from typing import Optional
 
@@ -12,16 +9,16 @@ from .core.config import Config
 from .core.detector import FirmwareDetector
 from .downloaders import DownloadManager
 from .extractors import ExtractionManager
+from .integrations.telegram import TelegramBot
 
 class DumprXCLI:
-    """Main CLI application for DumprX."""
-    
     def __init__(self):
-        self.logger = Logger("DumprX")
         self.config = Config()
+        self.logger = Logger("DumprX", config=self.config)
         self.detector = FirmwareDetector()
-        self.download_manager = DownloadManager(self.logger)
+        self.download_manager = DownloadManager(self.logger, self.config)
         self.extraction_manager = ExtractionManager(self.config, self.logger)
+        self.telegram_bot = TelegramBot(self.config, self.logger)
         
     def show_banner(self):
         """Display application banner."""
@@ -125,42 +122,26 @@ Advanced Firmware Extraction Toolkit v2.0.0
         
         return True
     
-    def process_input(self, input_path: str) -> Optional[str]:
-        """
-        Process input (download if URL, validate if local path).
-        
-        Returns:
-            Local file/directory path, or None if failed
-        """
+    async def process_input(self, input_path: str) -> Optional[str]:
         if self.download_manager.is_url(input_path):
-            self.logger.info("Download detected", f"URL: {input_path}")
+            self.logger.download("URL detected", f"Source: {input_path}")
             
             try:
-                # Create input directory
                 self.config.create_directories()
                 download_dir = self.config.get_download_dir()
                 
-                # Download file
-                downloaded_file = self.download_manager.download(input_path, download_dir)
+                downloaded_file = await self.download_manager.download(input_path, download_dir)
                 return downloaded_file
                 
             except Exception as e:
                 self.logger.error("Download failed", str(e))
                 return None
         else:
-            # Local file/directory
             return input_path
     
-    def extract_firmware(self, filepath: str) -> bool:
-        """
-        Extract firmware from file or directory.
-        
-        Returns:
-            True if successful, False otherwise
-        """
+    async def extract_firmware(self, filepath: str) -> bool:
         try:
-            # Detect firmware type
-            self.logger.info("Analyzing firmware")
+            self.logger.detect("Analyzing firmware")
             firmware_type, metadata = self.detector.detect_firmware_type(filepath)
             
             if firmware_type.value == "unknown":
@@ -169,15 +150,12 @@ Advanced Firmware Extraction Toolkit v2.0.0
             
             self.logger.success(f"Firmware detected", f"Type: {firmware_type.value}")
             
-            # Validate firmware
             if not self.detector.validate_firmware(firmware_type, filepath):
                 self.logger.warning("Firmware validation failed, proceeding anyway")
             
-            # Create output directories
             self.config.create_directories()
             
-            # Extract firmware
-            extracted_files = self.extraction_manager.extract_firmware(
+            extracted_files = await self.extraction_manager.extract_firmware(
                 firmware_type, filepath, metadata
             )
             
@@ -194,46 +172,34 @@ Advanced Firmware Extraction Toolkit v2.0.0
             self.logger.error("Extraction failed", str(e))
             return False
     
-    def run(self, args: Optional[list] = None) -> int:
-        """
-        Main application entry point.
-        
-        Returns:
-            Exit code (0 for success, 1 for error)
-        """
+    async def run(self, args: Optional[list] = None) -> int:
         parser = self.create_parser()
         
         if args is None:
             args = sys.argv[1:]
         
-        # Handle no arguments
         if not args:
             self.show_banner()
             self.show_help()
             return 1
         
-        # Parse arguments
         parsed_args = parser.parse_args(args)
         
-        # Handle help
         if parsed_args.help:
             self.show_banner()
             self.show_help()
             return 0
         
-        # Handle version
         if parsed_args.version:
             from . import __version__
             print(f"DumprX v{__version__}")
             return 0
         
-        # Configure logging
         if parsed_args.verbose:
             self.logger.level = "DEBUG"
         elif parsed_args.quiet:
             self.logger.level = "ERROR"
         
-        # Validate input
         if not parsed_args.input:
             self.logger.error("No input provided")
             self.show_help()
@@ -242,24 +208,27 @@ Advanced Firmware Extraction Toolkit v2.0.0
         if not self.validate_input(parsed_args.input):
             return 1
         
-        # Show banner
         if not parsed_args.quiet:
             self.show_banner()
         
-        # Process input
-        local_path = self.process_input(parsed_args.input)
+        local_path = await self.process_input(parsed_args.input)
         if not local_path:
             return 1
         
-        # Extract firmware
-        success = self.extract_firmware(local_path)
+        success = await self.extract_firmware(local_path)
         
         return 0 if success else 1
 
-def main():
-    """Main entry point."""
+async def main():
     app = DumprXCLI()
-    sys.exit(app.run())
+    return await app.run()
+
+def sync_main():
+    try:
+        return asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user")
+        return 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(sync_main())

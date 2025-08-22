@@ -1,241 +1,98 @@
-"""
-Download manager for various file hosting services.
-"""
-
 import os
 import re
+import asyncio
+import aiohttp
+import aiofiles
 import subprocess
 import urllib.parse
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from abc import ABC, abstractmethod
 
 from ..core.logger import Logger
+from ..core.config import Config
 
 class DownloadError(Exception):
     """Exception raised for download errors."""
     pass
 
 class BaseDownloader(ABC):
-    """Base class for downloaders."""
-    
-    def __init__(self, logger: Logger):
+    def __init__(self, logger: Logger, config: Config):
         self.logger = logger
+        self.config = config
     
     @abstractmethod
     def can_handle(self, url: str) -> bool:
-        """Check if this downloader can handle the URL."""
         pass
     
     @abstractmethod
-    def download(self, url: str, output_dir: str) -> str:
-        """Download file and return path to downloaded file."""
+    async def download(self, url: str, output_dir: str) -> str:
         pass
 
-class MegaMediaDriveDownloader(BaseDownloader):
-    """Downloader for Mega.nz, MediaFire, and Google Drive."""
-    
+class AsyncDirectDownloader(BaseDownloader):
     def can_handle(self, url: str) -> bool:
-        """Check if URL is from supported services."""
-        supported_domains = ['mega.nz', 'mediafire.com', 'drive.google.com']
-        return any(domain in url for domain in supported_domains)
-    
-    def download(self, url: str, output_dir: str) -> str:
-        """Download using mega-media-drive script."""
-        script_path = Path(__file__).parent.parent.parent / "utils" / "downloaders" / "mega-media-drive_dl.sh"
-        
-        if not script_path.exists():
-            raise DownloadError(f"Download script not found: {script_path}")
-        
-        self.logger.info("Downloading from cloud storage", f"Service: {self._get_service_name(url)}")
-        
-        try:
-            result = subprocess.run(
-                ["bash", str(script_path), url],
-                cwd=output_dir,
-                capture_output=True,
-                text=True,
-                timeout=3600  # 1 hour timeout
-            )
-            
-            if result.returncode != 0:
-                raise DownloadError(f"Download failed: {result.stderr}")
-            
-            # Find downloaded file
-            files = list(Path(output_dir).glob("*"))
-            if not files:
-                raise DownloadError("No files downloaded")
-            
-            # Return the largest file (likely the firmware)
-            downloaded_file = max(files, key=lambda f: f.stat().st_size)
-            self.logger.success("Download completed", f"File: {downloaded_file.name}")
-            
-            return str(downloaded_file)
-            
-        except subprocess.TimeoutExpired:
-            raise DownloadError("Download timeout (1 hour)")
-        except Exception as e:
-            raise DownloadError(f"Download error: {str(e)}")
-    
-    def _get_service_name(self, url: str) -> str:
-        """Get service name from URL."""
-        if 'mega.nz' in url:
-            return "Mega.nz"
-        elif 'mediafire.com' in url:
-            return "MediaFire"
-        elif 'drive.google.com' in url:
-            return "Google Drive"
-        return "Unknown"
-
-class AndroidFileHostDownloader(BaseDownloader):
-    """Downloader for AndroidFileHost."""
-    
-    def can_handle(self, url: str) -> bool:
-        """Check if URL is from AndroidFileHost."""
-        return 'androidfilehost.com' in url
-    
-    def download(self, url: str, output_dir: str) -> str:
-        """Download using AFH downloader script."""
-        script_path = Path(__file__).parent.parent.parent / "utils" / "downloaders" / "afh_dl.py"
-        
-        if not script_path.exists():
-            raise DownloadError(f"AFH downloader not found: {script_path}")
-        
-        self.logger.info("Downloading from AndroidFileHost")
-        
-        try:
-            result = subprocess.run(
-                ["python3", str(script_path), "-l", url],
-                cwd=output_dir,
-                capture_output=True,
-                text=True,
-                timeout=3600
-            )
-            
-            if result.returncode != 0:
-                raise DownloadError(f"AFH download failed: {result.stderr}")
-            
-            # Find downloaded file
-            files = list(Path(output_dir).glob("*"))
-            if not files:
-                raise DownloadError("No files downloaded from AFH")
-            
-            downloaded_file = max(files, key=lambda f: f.stat().st_size)
-            self.logger.success("Download completed", f"File: {downloaded_file.name}")
-            
-            return str(downloaded_file)
-            
-        except subprocess.TimeoutExpired:
-            raise DownloadError("AFH download timeout")
-        except Exception as e:
-            raise DownloadError(f"AFH download error: {str(e)}")
-
-class TransferDownloader(BaseDownloader):
-    """Downloader for WeTransfer."""
-    
-    def can_handle(self, url: str) -> bool:
-        """Check if URL is from WeTransfer."""
-        return '/we.tl/' in url
-    
-    def download(self, url: str, output_dir: str) -> str:
-        """Download using transfer tool."""
-        transfer_path = Path(__file__).parent.parent.parent / "utils" / "bin" / "transfer"
-        
-        if not transfer_path.exists():
-            raise DownloadError(f"Transfer tool not found: {transfer_path}")
-        
-        self.logger.info("Downloading from WeTransfer")
-        
-        try:
-            result = subprocess.run(
-                [str(transfer_path), url],
-                cwd=output_dir,
-                capture_output=True,
-                text=True,
-                timeout=3600
-            )
-            
-            if result.returncode != 0:
-                raise DownloadError(f"WeTransfer download failed: {result.stderr}")
-            
-            # Find downloaded file
-            files = list(Path(output_dir).glob("*"))
-            if not files:
-                raise DownloadError("No files downloaded from WeTransfer")
-            
-            downloaded_file = max(files, key=lambda f: f.stat().st_size)
-            self.logger.success("Download completed", f"File: {downloaded_file.name}")
-            
-            return str(downloaded_file)
-            
-        except subprocess.TimeoutExpired:
-            raise DownloadError("WeTransfer download timeout")
-        except Exception as e:
-            raise DownloadError(f"WeTransfer download error: {str(e)}")
-
-class DirectDownloader(BaseDownloader):
-    """Downloader for direct HTTP/HTTPS links."""
-    
-    def can_handle(self, url: str) -> bool:
-        """Check if URL is a direct download link."""
         return url.startswith(('http://', 'https://'))
     
-    def download(self, url: str, output_dir: str) -> str:
-        """Download using aria2c or wget."""
-        # Handle OneDrive links
+    async def download(self, url: str, output_dir: str) -> str:
         if '1drv.ms' in url:
             url = url.replace('ms', 'ws')
         
         filename = self._extract_filename(url)
         output_path = Path(output_dir) / filename
         
-        self.logger.info("Downloading direct link", f"URL: {url}")
+        self.logger.download("Starting download", f"URL: {url}")
         
-        # Try aria2c first
         try:
-            result = subprocess.run([
-                "aria2c", "-x16", "-s8", 
-                "--console-log-level=warn",
-                "--summary-interval=0",
-                "--check-certificate=false",
-                "--out", filename,
-                "--dir", output_dir,
-                url
-            ], capture_output=True, text=True, timeout=3600)
-            
-            if result.returncode == 0 and output_path.exists():
-                self.logger.success("Download completed", f"File: {filename}")
-                return str(output_path)
-                
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            pass
+            return await self._download_with_aria2c(url, output_path)
+        except Exception:
+            self.logger.info("Aria2c failed, trying aiohttp")
+            return await self._download_with_aiohttp(url, output_path)
+    
+    async def _download_with_aria2c(self, url: str, output_path: Path) -> str:
+        process = await asyncio.create_subprocess_exec(
+            "aria2c", 
+            *self.config.downloads.aria2c_args.split(),
+            "--out", output_path.name,
+            "--dir", str(output_path.parent),
+            url,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
         
-        # Fallback to wget
-        try:
-            self.logger.info("Retrying with wget")
-            result = subprocess.run([
-                "wget", "-q", "--show-progress", 
-                "--progress=bar:force",
-                "--no-check-certificate",
-                "-O", str(output_path),
-                url
-            ], timeout=3600)
-            
-            if result.returncode == 0 and output_path.exists():
-                self.logger.success("Download completed", f"File: {filename}")
-                return str(output_path)
-            else:
-                raise DownloadError("wget download failed")
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(), 
+            timeout=self.config.downloads.timeout
+        )
+        
+        if process.returncode == 0 and output_path.exists():
+            self.logger.success("Download completed", f"File: {output_path.name}")
+            return str(output_path)
+        else:
+            raise DownloadError(f"Aria2c failed: {stderr.decode()}")
+    
+    async def _download_with_aiohttp(self, url: str, output_path: Path) -> str:
+        timeout = aiohttp.ClientTimeout(total=self.config.downloads.timeout)
+        
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    raise DownloadError(f"HTTP {response.status}: {response.reason}")
                 
-        except subprocess.TimeoutExpired:
-            raise DownloadError("Direct download timeout")
-        except FileNotFoundError:
-            raise DownloadError("wget not found")
-        except Exception as e:
-            raise DownloadError(f"Direct download error: {str(e)}")
+                total_size = int(response.headers.get('content-length', 0))
+                downloaded = 0
+                
+                async with aiofiles.open(output_path, 'wb') as f:
+                    async for chunk in response.content.iter_chunked(self.config.downloads.chunk_size):
+                        await f.write(chunk)
+                        downloaded += len(chunk)
+                        
+                        if total_size > 0:
+                            self.logger.progress("Downloading", downloaded, total_size)
+        
+        self.logger.success("Download completed", f"File: {output_path.name}")
+        return str(output_path)
     
     def _extract_filename(self, url: str) -> str:
-        """Extract filename from URL."""
         parsed = urllib.parse.urlparse(url)
         filename = os.path.basename(parsed.path)
         
@@ -244,58 +101,161 @@ class DirectDownloader(BaseDownloader):
         
         return filename
 
-class DownloadManager:
-    """Manages downloads from various sources."""
+class MegaMediaDriveDownloader(BaseDownloader):
+    def can_handle(self, url: str) -> bool:
+        supported_domains = ['mega.nz', 'mediafire.com', 'drive.google.com']
+        return any(domain in url for domain in supported_domains)
     
-    def __init__(self, logger: Logger):
+    async def download(self, url: str, output_dir: str) -> str:
+        script_path = self.config.get_tool_path('mega_media_drive_dl')
+        if not script_path or not Path(script_path).exists():
+            script_path = Path(self.config.get_utils_dir()) / "downloaders" / "mega-media-drive_dl.sh"
+        
+        if not Path(script_path).exists():
+            raise DownloadError(f"Download script not found: {script_path}")
+        
+        self.logger.download("Downloading from cloud storage", f"Service: {self._get_service_name(url)}")
+        
+        process = await asyncio.create_subprocess_exec(
+            "bash", str(script_path), url,
+            cwd=output_dir,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(),
+            timeout=self.config.downloads.timeout
+        )
+        
+        if process.returncode != 0:
+            raise DownloadError(f"Download failed: {stderr.decode()}")
+        
+        files = list(Path(output_dir).glob("*"))
+        if not files:
+            raise DownloadError("No files downloaded")
+        
+        downloaded_file = max(files, key=lambda f: f.stat().st_size)
+        self.logger.success("Download completed", f"File: {downloaded_file.name}")
+        
+        return str(downloaded_file)
+    
+    def _get_service_name(self, url: str) -> str:
+        if 'mega.nz' in url:
+            return "Mega.nz"
+        elif 'mediafire.com' in url:
+            return "MediaFire" 
+        elif 'drive.google.com' in url:
+            return "Google Drive"
+        return "Unknown"
+
+class AndroidFileHostDownloader(BaseDownloader):
+    def can_handle(self, url: str) -> bool:
+        return 'androidfilehost.com' in url
+    
+    async def download(self, url: str, output_dir: str) -> str:
+        script_path = Path(self.config.get_utils_dir()) / "downloaders" / "afh_dl.py"
+        
+        if not script_path.exists():
+            raise DownloadError(f"AFH downloader not found: {script_path}")
+        
+        self.logger.download("Downloading from AndroidFileHost")
+        
+        process = await asyncio.create_subprocess_exec(
+            "python3", str(script_path), "-l", url,
+            cwd=output_dir,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(),
+            timeout=self.config.downloads.timeout
+        )
+        
+        if process.returncode != 0:
+            raise DownloadError(f"AFH download failed: {stderr.decode()}")
+        
+        files = list(Path(output_dir).glob("*"))
+        if not files:
+            raise DownloadError("No files downloaded from AFH")
+        
+        downloaded_file = max(files, key=lambda f: f.stat().st_size)
+        self.logger.success("Download completed", f"File: {downloaded_file.name}")
+        
+        return str(downloaded_file)
+
+class TransferDownloader(BaseDownloader):
+    def can_handle(self, url: str) -> bool:
+        return '/we.tl/' in url
+    
+    async def download(self, url: str, output_dir: str) -> str:
+        transfer_path = Path(self.config.get_utils_dir()) / "bin" / "transfer"
+        
+        if not transfer_path.exists():
+            raise DownloadError(f"Transfer tool not found: {transfer_path}")
+        
+        self.logger.download("Downloading from WeTransfer")
+        
+        process = await asyncio.create_subprocess_exec(
+            str(transfer_path), url,
+            cwd=output_dir,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(),
+            timeout=self.config.downloads.timeout
+        )
+        
+        if process.returncode != 0:
+            raise DownloadError(f"WeTransfer download failed: {stderr.decode()}")
+        
+        files = list(Path(output_dir).glob("*"))
+        if not files:
+            raise DownloadError("No files downloaded from WeTransfer")
+        
+        downloaded_file = max(files, key=lambda f: f.stat().st_size)
+        self.logger.success("Download completed", f"File: {downloaded_file.name}")
+        
+        return str(downloaded_file)
+
+class DownloadManager:
+    def __init__(self, logger: Logger, config: Config):
         self.logger = logger
+        self.config = config
         self.downloaders = [
-            MegaMediaDriveDownloader(logger),
-            AndroidFileHostDownloader(logger),
-            TransferDownloader(logger),
-            DirectDownloader(logger)  # This should be last as it handles all HTTP(S)
+            MegaMediaDriveDownloader(logger, config),
+            AndroidFileHostDownloader(logger, config),
+            TransferDownloader(logger, config),
+            AsyncDirectDownloader(logger, config)
         ]
     
-    def download(self, url: str, output_dir: str) -> str:
-        """
-        Download file from URL to output directory.
-        
-        Args:
-            url: URL to download from
-            output_dir: Directory to save downloaded file
-            
-        Returns:
-            Path to downloaded file
-            
-        Raises:
-            DownloadError: If download fails
-        """
-        # Create output directory
+    async def download(self, url: str, output_dir: str) -> str:
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         
-        # Clean existing files in output directory
         for file in Path(output_dir).glob("*"):
             if file.is_file():
                 file.unlink()
         
-        # Find appropriate downloader
         for downloader in self.downloaders:
             if downloader.can_handle(url):
-                try:
-                    return downloader.download(url, output_dir)
-                except DownloadError:
-                    raise
-                except Exception as e:
-                    raise DownloadError(f"Downloader {downloader.__class__.__name__} failed: {str(e)}")
+                for attempt in range(self.config.downloads.max_retries):
+                    try:
+                        return await downloader.download(url, output_dir)
+                    except DownloadError as e:
+                        if attempt == self.config.downloads.max_retries - 1:
+                            raise
+                        self.logger.warning(f"Download attempt {attempt + 1} failed", str(e))
+                        await asyncio.sleep(2 ** attempt)
         
         raise DownloadError(f"No downloader available for URL: {url}")
     
     def is_url(self, path: str) -> bool:
-        """Check if path is a URL."""
         return bool(re.match(r'^https?://.*$', path))
     
-    def get_supported_services(self) -> list:
-        """Get list of supported download services."""
+    def get_supported_services(self) -> List[str]:
         return [
             "Direct HTTP/HTTPS links",
             "Mega.nz",

@@ -1,185 +1,152 @@
-"""
-Configuration management for DumprX.
-"""
-
 import os
-import json
+import yaml
 from pathlib import Path
-from typing import Dict, Any, Optional
-from dataclasses import dataclass, asdict
+from typing import Dict, Any, Optional, List
+from dataclasses import dataclass
 
 @dataclass
-class Paths:
-    """Directory paths configuration."""
-    project_dir: str
-    input_dir: str
-    utils_dir: str
-    output_dir: str
-    temp_dir: str
+class UIConfig:
+    colors: Dict[str, str]
+    emojis: Dict[str, str]
+
+@dataclass  
+class DownloadConfig:
+    timeout: int
+    max_retries: int
+    chunk_size: int
+    aria2c_args: str
 
 @dataclass
-class Tools:
-    """External tools configuration."""
-    sdat2img: str
-    simg2img: str
-    payload_dumper: str
-    lpunpack: str
-    kdz_extract: str
-    dz_extract: str
-    unpackboot: str
-    sevenzip: str
+class GitConfig:
+    commit_batch_size: int
+    max_file_size: str
+    split_size: str
 
 @dataclass
-class Tokens:
-    """Authentication tokens configuration."""
-    github_token: Optional[str] = None
-    gitlab_token: Optional[str] = None
-    telegram_token: Optional[str] = None
-    telegram_chat_id: Optional[str] = None
+class TelegramConfig:
+    default_chat: str
+
+@dataclass
+class AsyncConfig:
+    max_workers: int
+    download_workers: int
+    extract_workers: int
 
 class Config:
-    """Configuration manager for DumprX."""
-    
     def __init__(self, project_dir: Optional[str] = None):
         if project_dir is None:
             project_dir = Path(__file__).parent.parent.parent.absolute()
         
         self.project_dir = Path(project_dir)
-        self.config_file = self.project_dir / "dumprx_config.json"
+        self.config_file = self.project_dir / "config.yaml"
         
-        # Initialize paths
-        self.paths = Paths(
-            project_dir=str(self.project_dir),
-            input_dir=str(self.project_dir / "input"),
-            utils_dir=str(self.project_dir / "utils"),
-            output_dir=str(self.project_dir / "out"),
-            temp_dir=str(self.project_dir / "out" / "tmp")
-        )
+        self.version = "2.0.0"
+        self.paths: Dict[str, str] = {}
+        self.tools: Dict[str, str] = {}
+        self.external_tools: List[str] = []
+        self.partitions: List[str] = []
+        self.ext4_partitions: List[str] = []
+        self.other_partitions: Dict[str, str] = {}
+        self.ui: UIConfig = UIConfig({}, {})
+        self.downloads: DownloadConfig = DownloadConfig(300, 3, 8192, "")
+        self.git: GitConfig = GitConfig(100, "62M", "47M")
+        self.telegram: TelegramConfig = TelegramConfig("@DumprXDumps")
+        self.async_config: AsyncConfig = AsyncConfig(4, 2, 2)
         
-        # Initialize tools paths
-        utils_dir = self.project_dir / "utils"
-        self.tools = Tools(
-            sdat2img=str(utils_dir / "sdat2img.py"),
-            simg2img=str(utils_dir / "bin" / "simg2img"),
-            payload_dumper=str(utils_dir / "bin" / "payload-dumper-go"),
-            lpunpack=str(utils_dir / "lpunpack"),
-            kdz_extract=str(utils_dir / "kdztools" / "unkdz.py"),
-            dz_extract=str(utils_dir / "kdztools" / "undz.py"),
-            unpackboot=str(utils_dir / "unpackboot.sh"),
-            sevenzip=str(utils_dir / "bin" / "7zz") if (utils_dir / "bin" / "7zz").exists() else "7zz"
-        )
+        self.github_token = self._load_token('.github_token')
+        self.gitlab_token = self._load_token('.gitlab_token')
+        self.telegram_token = self._load_token('.tg_token')
+        self.telegram_chat_id = self._load_token('.tg_chat')
         
-        # Initialize tokens
-        self.tokens = Tokens()
-        self._load_tokens()
-        
-        # Supported partitions
-        self.partitions = [
-            "system", "system_ext", "system_other", "systemex", "vendor", "cust", 
-            "odm", "oem", "factory", "product", "xrom", "modem", "dtbo", "dtb", 
-            "boot", "vendor_boot", "recovery", "tz", "oppo_product", "preload_common",
-            "opproduct", "reserve", "india", "my_preload", "my_odm", "my_stock",
-            "my_operator", "my_country", "my_product", "my_company", "my_engineering",
-            "my_heytap", "my_custom", "my_manifest", "my_carrier", "my_region",
-            "my_bigball", "my_version", "special_preload", "system_dlkm", "vendor_dlkm",
-            "odm_dlkm", "init_boot", "vendor_kernel_boot", "odmko", "socko", "nt_log",
-            "mi_ext", "hw_product", "product_h", "preas", "preavs"
-        ]
-        
-        # EXT4 partitions
-        self.ext4_partitions = [
-            "system", "vendor", "cust", "odm", "oem", "factory", "product", "xrom",
-            "systemex", "oppo_product", "preload_common", "hw_product", "product_h",
-            "preas", "preavs"
-        ]
-        
-        # External tools to clone
-        self.external_tools = [
-            "bkerler/oppo_ozip_decrypt",
-            "bkerler/oppo_decrypt", 
-            "marin-m/vmlinux-to-elf",
-            "ShivamKumarJha/android_tools",
-            "HemanthJabalpuri/pacextractor"
-        ]
-        
-        # Load configuration file if exists
         self._load_config()
     
-    def _load_tokens(self):
-        """Load authentication tokens from files."""
-        token_files = {
-            'github_token': self.project_dir / '.github_token',
-            'gitlab_token': self.project_dir / '.gitlab_token', 
-            'telegram_token': self.project_dir / '.tg_token',
-            'telegram_chat_id': self.project_dir / '.tg_chat'
-        }
-        
-        for attr, file_path in token_files.items():
-            if file_path.exists():
-                try:
-                    with open(file_path, 'r') as f:
-                        setattr(self.tokens, attr, f.read().strip())
-                except Exception:
-                    pass
+    def _load_token(self, filename: str) -> Optional[str]:
+        token_file = self.project_dir / filename
+        if token_file.exists():
+            try:
+                return token_file.read_text().strip()
+            except Exception:
+                pass
+        return None
     
     def _load_config(self):
-        """Load configuration from JSON file."""
         if self.config_file.exists():
             try:
                 with open(self.config_file, 'r') as f:
-                    config_data = json.load(f)
-                    
-                # Update paths if in config
-                if 'paths' in config_data:
-                    for key, value in config_data['paths'].items():
-                        if hasattr(self.paths, key):
-                            setattr(self.paths, key, value)
+                    config_data = yaml.safe_load(f)
                 
-                # Update tools if in config  
-                if 'tools' in config_data:
-                    for key, value in config_data['tools'].items():
-                        if hasattr(self.tools, key):
-                            setattr(self.tools, key, value)
-                            
-            except Exception:
-                pass
+                if not config_data:
+                    return
+                
+                self.version = config_data.get('version', self.version)
+                self.paths = config_data.get('paths', {})
+                self.tools = config_data.get('tools', {})
+                self.external_tools = config_data.get('external_tools', [])
+                self.partitions = config_data.get('partitions', [])
+                self.ext4_partitions = config_data.get('ext4_partitions', [])
+                self.other_partitions = config_data.get('other_partitions', {})
+                
+                ui_config = config_data.get('ui', {})
+                self.ui = UIConfig(
+                    colors=ui_config.get('colors', {}),
+                    emojis=ui_config.get('emojis', {})
+                )
+                
+                download_config = config_data.get('downloads', {})
+                self.downloads = DownloadConfig(
+                    timeout=download_config.get('timeout', 300),
+                    max_retries=download_config.get('max_retries', 3),
+                    chunk_size=download_config.get('chunk_size', 8192),
+                    aria2c_args=download_config.get('aria2c_args', "")
+                )
+                
+                git_config = config_data.get('git', {})
+                self.git = GitConfig(
+                    commit_batch_size=git_config.get('commit_batch_size', 100),
+                    max_file_size=git_config.get('max_file_size', "62M"),
+                    split_size=git_config.get('split_size', "47M")
+                )
+                
+                telegram_config = config_data.get('telegram', {})
+                self.telegram = TelegramConfig(
+                    default_chat=telegram_config.get('default_chat', "@DumprXDumps")
+                )
+                
+                async_config = config_data.get('async', {})
+                self.async_config = AsyncConfig(
+                    max_workers=async_config.get('max_workers', 4),
+                    download_workers=async_config.get('download_workers', 2),
+                    extract_workers=async_config.get('extract_workers', 2)
+                )
+                
+            except Exception as e:
+                print(f"Error loading config: {e}")
     
-    def save_config(self):
-        """Save current configuration to JSON file."""
-        config_data = {
-            'paths': asdict(self.paths),
-            'tools': asdict(self.tools),
-            'partitions': self.partitions,
-            'ext4_partitions': self.ext4_partitions,
-            'external_tools': self.external_tools
-        }
-        
-        with open(self.config_file, 'w') as f:
-            json.dump(config_data, f, indent=2)
+    def get_path(self, key: str) -> str:
+        base_path = self.paths.get(key, "")
+        if base_path.startswith("./"):
+            return str(self.project_dir / base_path[2:])
+        return base_path
+    
+    def get_tool_path(self, tool: str) -> str:
+        tool_path = self.tools.get(tool, "")
+        if tool_path.startswith("./"):
+            return str(self.project_dir / tool_path[2:])
+        return tool_path
     
     def create_directories(self):
-        """Create necessary directories."""
-        dirs_to_create = [
-            self.paths.input_dir,
-            self.paths.output_dir, 
-            self.paths.temp_dir
-        ]
-        
-        for dir_path in dirs_to_create:
-            Path(dir_path).mkdir(parents=True, exist_ok=True)
+        for key in ['input', 'output', 'temp']:
+            path = Path(self.get_path(key))
+            path.mkdir(parents=True, exist_ok=True)
     
     def get_download_dir(self) -> str:
-        """Get download directory path."""
-        return self.paths.input_dir
+        return self.get_path('input')
     
     def get_output_dir(self) -> str:
-        """Get output directory path."""
-        return self.paths.output_dir
+        return self.get_path('output')
     
     def get_temp_dir(self) -> str:
-        """Get temporary directory path."""
-        return self.paths.temp_dir
+        return self.get_path('temp')
     
     def get_utils_dir(self) -> str:
-        """Get utils directory path."""
-        return self.paths.utils_dir
+        return self.get_path('utils')

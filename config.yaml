@@ -1,0 +1,173 @@
+# DumprX Configuration File
+version: "2.0.0"
+
+# Directory paths
+paths:
+  input: "./input"
+  output: "./out"
+  temp: "./out/tmp"
+  utils: "./utils"
+
+# Tool paths
+tools:
+  sdat2img: "./utils/sdat2img.py"
+  simg2img: "./utils/bin/simg2img"
+  payload_dumper: "./utils/bin/payload-dumper-go"
+  lpunpack: "./utils/lpunpack"
+  kdz_extract: "./utils/kdztools/unkdz.py"
+  dz_extract: "./utils/kdztools/undz.py"
+  unpackboot: "./utils/unpackboot.py"
+  sevenzip: "./utils/bin/7zz"
+  packsparseimg: "./utils/bin/packsparseimg"
+  unsin: "./utils/unsin"
+  dtc: "./utils/dtc"
+  vmlinux2elf: "./utils/vmlinux-to-elf/vmlinux-to-elf"
+  kallsyms_finder: "./utils/vmlinux-to-elf/kallsyms-finder"
+  ozipdecrypt: "./utils/oppo_ozip_decrypt/ozipdecrypt.py"
+  ofp_qc_decrypt: "./utils/oppo_decrypt/ofp_qc_decrypt.py"
+  ofp_mtk_decrypt: "./utils/oppo_decrypt/ofp_mtk_decrypt.py"
+  opsdecrypt: "./utils/oppo_decrypt/opscrypto.py"
+  splituapp: "./utils/splituapp.py"
+  pacextractor: "./utils/pacextractor/python/pacExtractor.py"
+  nb0_extract: "./utils/nb0-extract"
+  ruudecrypt: "./utils/RUU_Decrypt_Tool"
+  extract_ikconfig: "./utils/extract-ikconfig"
+  aml_extract: "./utils/aml-upgrade-package-extract"
+  afptool_extract: "./utils/bin/afptool"
+  rk_extract: "./utils/bin/rkImageMaker"
+  transfer: "./utils/bin/transfer"
+  fsck_erofs: "./utils/bin/fsck.erofs"
+
+# External repositories to clone
+external_tools:
+  - "bkerler/oppo_ozip_decrypt"
+  - "bkerler/oppo_decrypt"
+  - "marin-m/vmlinux-to-elf"
+  - "ShivamKumarJha/android_tools"
+  - "HemanthJabalpuri/pacextractor"
+
+# Supported partitions
+partitions:
+  - "system"
+  - "system_ext"
+  - "system_other"
+  - "systemex"
+  - "vendor"
+  - "cust"
+  - "odm"
+  - "oem"
+  - "factory"
+  - "product"
+  - "xrom"
+  - "modem"
+  - "dtbo"
+  - "dtb"
+  - "boot"
+  - "vendor_boot"
+  - "recovery"
+  - "tz"
+  - "oppo_product"
+  - "preload_common"
+  - "opproduct"
+  - "reserve"
+  - "india"
+  - "my_preload"
+  - "my_odm"
+  - "my_stock"
+  - "my_operator"
+  - "my_country"
+  - "my_product"
+  - "my_company"
+  - "my_engineering"
+  - "my_heytap"
+  - "my_custom"
+  - "my_manifest"
+  - "my_carrier"
+  - "my_region"
+  - "my_bigball"
+  - "my_version"
+  - "special_preload"
+  - "system_dlkm"
+  - "vendor_dlkm"
+  - "odm_dlkm"
+  - "init_boot"
+  - "vendor_kernel_boot"
+  - "odmko"
+  - "socko"
+  - "nt_log"
+  - "mi_ext"
+  - "hw_product"
+  - "product_h"
+  - "preas"
+  - "preavs"
+
+# EXT4 partitions
+ext4_partitions:
+  - "system"
+  - "vendor"
+  - "cust"
+  - "odm"
+  - "oem"
+  - "factory"
+  - "product"
+  - "xrom"
+  - "systemex"
+  - "oppo_product"
+  - "preload_common"
+  - "hw_product"
+  - "product_h"
+  - "preas"
+  - "preavs"
+
+# Other partitions with special naming
+other_partitions:
+  "tz.mbn": "tz"
+  "tz.img": "tz"
+  "modem.img": "modem"
+  "NON-HLOS": "modem"
+  "boot-verified.img": "boot"
+  "recovery-verified.img": "recovery"
+  "dtbo-verified.img": "dtbo"
+
+# UI/UX settings
+ui:
+  colors:
+    primary: "\033[1;36m"    # Cyan
+    success: "\033[1;32m"    # Green  
+    warning: "\033[1;33m"    # Yellow
+    error: "\033[1;31m"      # Red
+    info: "\033[1;34m"       # Blue
+    reset: "\033[0m"         # Reset
+  
+  emojis:
+    success: "✅"
+    error: "❌"
+    warning: "⚠️"
+    info: "ℹ️"
+    progress: "📋"
+    download: "⬇️"
+    extract: "📦"
+    detection: "🔍"
+
+# Download settings
+downloads:
+  timeout: 300
+  max_retries: 3
+  chunk_size: 8192
+  aria2c_args: "-x16 -s8 --console-log-level=warn --summary-interval=0 --check-certificate=false"
+  
+# GitHub/GitLab settings  
+git:
+  commit_batch_size: 100
+  max_file_size: "62M"
+  split_size: "47M"
+  
+# Telegram settings
+telegram:
+  default_chat: "@DumprXDumps"
+  
+# Async settings
+async:
+  max_workers: 4
+  download_workers: 2
+  extract_workers: 2

@@ -1,9 +1,6 @@
-"""
-Base extractor class and extraction management.
-"""
-
 import os
 import shutil
+import asyncio
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Dict, Optional, Any
@@ -18,8 +15,6 @@ class ExtractionError(Exception):
     pass
 
 class BaseExtractor(ABC):
-    """Base class for firmware extractors."""
-    
     def __init__(self, config: Config, logger: Logger):
         self.config = config
         self.logger = logger
@@ -28,12 +23,10 @@ class BaseExtractor(ABC):
     
     @abstractmethod
     def can_extract(self, firmware_type: FirmwareType) -> bool:
-        """Check if this extractor can handle the firmware type."""
         pass
     
     @abstractmethod
-    def extract(self, filepath: str, metadata: Dict[str, Any]) -> List[str]:
-        """Extract firmware and return list of extracted files."""
+    async def extract(self, filepath: str, metadata: Dict[str, Any]) -> List[str]:
         pass
     
     def prepare_extraction(self, filename: str = None) -> Path:
@@ -101,29 +94,14 @@ class ExtractionManager:
             ArchiveExtractor(self.config, self.logger),  # Should be last
         ]
     
-    def extract_firmware(self, firmware_type: FirmwareType, filepath: str, metadata: Dict[str, Any]) -> List[str]:
-        """
-        Extract firmware using appropriate extractor.
+    async def extract_firmware(self, firmware_type: FirmwareType, filepath: str, metadata: Dict[str, Any]) -> List[str]:
+        self.logger.extract(f"Starting extraction", f"Type: {firmware_type.value}")
         
-        Args:
-            firmware_type: Detected firmware type
-            filepath: Path to firmware file
-            metadata: Firmware metadata
-            
-        Returns:
-            List of extracted files
-            
-        Raises:
-            ExtractionError: If extraction fails
-        """
-        self.logger.info(f"Starting extraction", f"Type: {firmware_type.value}")
-        
-        # Find appropriate extractor
         for extractor in self.extractors:
             if extractor.can_extract(firmware_type):
                 try:
                     self.logger.debug(f"Using extractor: {extractor.__class__.__name__}")
-                    extracted_files = extractor.extract(filepath, metadata)
+                    extracted_files = await extractor.extract(filepath, metadata)
                     
                     if extracted_files:
                         self.logger.success(f"Extraction completed", f"Files: {len(extracted_files)}")
