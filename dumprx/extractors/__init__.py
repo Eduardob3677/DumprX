@@ -1,0 +1,1 @@
+from dumprx.extractors.extractor_manager import ExtractorManager
