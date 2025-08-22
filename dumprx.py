@@ -1,5 +1,6 @@
 import asyncio
 import sys
+import time
 import argparse
 from pathlib import Path
 from typing import Optional
@@ -79,9 +80,20 @@ class CLI:
     
     async def process_firmware(self, args) -> int:
         try:
+            from lib.telegram.bot import telegram_bot
+            
             ensure_dir(args.output)
             
             input_path = Path(args.input)
+            start_time = time.time()
+            
+            firmware_info = {
+                'filename': args.input,
+                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+                'device': 'Unknown'
+            }
+            
+            await telegram_bot.notify_extraction_start(firmware_info)
             
             if is_url(args.input):
                 logger.processing("Downloading firmware from URL")
@@ -96,20 +108,55 @@ class CLI:
             extraction_manager = ExtractionManager()
             result = await extraction_manager.extract(input_path, Path(args.output))
             
+            duration = time.time() - start_time
+            
             if not args.no_upload:
                 from lib.git.manager import GitManager
                 git_manager = GitManager()
                 await git_manager.upload_results(Path(args.output))
             
+            result_info = {
+                'success': True,
+                'filename': args.input,
+                'duration': f"{duration:.1f}s",
+                'file_count': len(list(Path(args.output).rglob('*'))),
+                'output_size': self._get_directory_size(Path(args.output)),
+                'device': result.get('device', 'Unknown')
+            }
+            
+            await telegram_bot.notify_extraction_complete(result_info)
             logger.success("Firmware processing completed successfully")
             return 0
             
         except DumprXException as e:
+            error_info = {
+                'error': str(e),
+                'file': args.input,
+                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+            }
+            await telegram_bot.notify_error(error_info)
             logger.error(str(e))
             return 1
         except Exception as e:
+            error_info = {
+                'error': f"Unexpected error: {str(e)}",
+                'file': args.input,
+                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+            }
+            await telegram_bot.notify_error(error_info)
             logger.error(f"Unexpected error: {str(e)}")
             return 1
+    
+    def _get_directory_size(self, directory: Path) -> str:
+        total_size = sum(f.stat().st_size for f in directory.rglob('*') if f.is_file())
+        return self._format_size(total_size)
+    
+    def _format_size(self, size_bytes: int) -> str:
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size_bytes < 1024.0:
+                return f"{size_bytes:.1f}{unit}"
+            size_bytes /= 1024.0
+        return f"{size_bytes:.1f}TB"
     
     async def run(self, args: list = None) -> int:
         parser = self.create_parser()

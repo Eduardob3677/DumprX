@@ -13,3 +13,5 @@ out/
 __pycache__
 utils/oppo_*
 utils/vmlinux*
+dumper.sh.bak
+validate-workflow.sh.bak

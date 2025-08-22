@@ -11,6 +11,12 @@ from .extractors import (
     OZipExtractor, SDATextractor, HuaweiExtractor,
     SuperImageExtractor
 )
+from .advanced_extractors import (
+    OFPExtractor, OPSExtractor, PACExtractor, NB0Extractor,
+    SINExtractor, RUUExtractor, ChunkExtractor, RockchipExtractor,
+    AMLExtractor, SparseImageExtractor
+)
+from .device_tree import DeviceTreeGenerator
 
 class ExtractionManager:
     def __init__(self):
@@ -22,6 +28,16 @@ class ExtractionManager:
             PayloadExtractor(self.utils_dir),
             KDZExtractor(self.utils_dir),
             OZipExtractor(self.utils_dir),
+            OFPExtractor(self.utils_dir),
+            OPSExtractor(self.utils_dir),
+            PACExtractor(self.utils_dir),
+            NB0Extractor(self.utils_dir),
+            SINExtractor(self.utils_dir),
+            RUUExtractor(self.utils_dir),
+            ChunkExtractor(self.utils_dir),
+            RockchipExtractor(self.utils_dir),
+            AMLExtractor(self.utils_dir),
+            SparseImageExtractor(self.utils_dir),
             SDATextractor(self.utils_dir),
             HuaweiExtractor(self.utils_dir),
             SuperImageExtractor(self.utils_dir)
@@ -101,7 +117,13 @@ class ExtractionManager:
     
     async def _process_extracted_content(self, temp_dir: Path, final_output: Path) -> None:
         await self._extract_partitions(temp_dir, final_output)
+        await self._process_boot_images(final_output)
         await self._organize_output(temp_dir, final_output)
+        
+        device_tree_gen = DeviceTreeGenerator(final_output, self.utils_dir)
+        device_info = await device_tree_gen.generate_device_trees()
+        
+        logger.success("Firmware extraction and processing completed")
     
     async def _extract_partitions(self, source_dir: Path, output_dir: Path) -> None:
         partitions = config.get('extraction.partitions', [])
@@ -150,3 +172,44 @@ class ExtractionManager:
                 
                 if not dest_path.exists():
                     item.rename(dest_path)
+    
+    async def _process_boot_images(self, output_dir: Path) -> None:
+        boot_images = list(output_dir.glob('**/boot*.img'))
+        boot_images.extend(list(output_dir.glob('**/recovery*.img')))
+        
+        for boot_img in boot_images:
+            logger.processing(f"Processing boot image: {boot_img.name}")
+            
+            boot_output = output_dir / f"{boot_img.stem}RE"
+            ensure_dir(boot_output)
+            
+            unpack_script = self.utils_dir / "unpackboot.sh"
+            if unpack_script.exists():
+                result = await run_command(['bash', str(unpack_script), str(boot_img)], cwd=boot_output)
+                if result.returncode == 0:
+                    logger.success(f"Unpacked {boot_img.name}")
+                else:
+                    logger.warning(f"Failed to unpack {boot_img.name}")
+            
+            await self._extract_kernel_config(boot_output)
+    
+    async def _extract_kernel_config(self, boot_dir: Path) -> None:
+        kernel_files = list(boot_dir.glob('kernel*'))
+        if not kernel_files:
+            return
+        
+        extract_ikconfig = self.utils_dir / "extract-ikconfig"
+        if not extract_ikconfig.exists():
+            return
+        
+        for kernel_file in kernel_files:
+            try:
+                result = await run_command([str(extract_ikconfig), str(kernel_file)])
+                if result.returncode == 0 and result.stdout:
+                    config_file = boot_dir / "ikconfig"
+                    with open(config_file, 'w') as f:
+                        f.write(result.stdout)
+                    logger.success(f"Extracted kernel config to {config_file}")
+                    break
+            except Exception as e:
+                logger.warning(f"Failed to extract kernel config: {e}")
