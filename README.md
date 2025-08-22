@@ -1,53 +1,222 @@
 <div align="center">
 
-  <h1>DumprX</h1>
+  <h1>DumprX v2.0</h1>
 
-  <h4>Based Upon Phoenix Firmware Dumper from DroidDumps, with some Changes and Improvements</h4>
+  <h4>Modern Python Firmware Dumper with CLI Interface</h4>
+
+  <p>Complete migration from bash to Python with enhanced features and modern architecture</p>
 
 </div>
 
+## What's New in v2.0
 
-## What this really is
+DumprX has been completely rewritten in Python with a modern architecture:
 
-You might've used firmware extractor via dumpyara from https://github.com/AndroidDumps/. This toolkit is revamped edition of the tools with some improvements and feature additions.
+- **🐍 Pure Python Implementation**: No more bash dependencies, fully cross-platform
+- **🖥️ Modern CLI Interface**: Beautiful Rich-based CLI with progress bars and colors
+- **⚙️ Configuration Management**: YAML-based configuration with easy management
+- **📦 Modular Architecture**: Clean separation of concerns with pluggable extractors and downloaders
+- **🚀 Easy Installation**: Standard Python packaging with pip install
+- **🔧 Developer Friendly**: Well-structured codebase for easy maintenance and extension
 
-## The improvements over dumpyara
+## Architecture
 
-- [x] dumpyara's and firmware_extractor's scripts are merged with handpicked shellcheck-ed and pylint-ed improvements
-- [x] The script can download and dump firmware from different filehosters such as Mega.NZ, Mediafire.com, AndroidFileHost.com and from Google Drive URLs
-- [x] File as-well-as Folder as an input is processed thoroughly to check all kinds of supported firmware types
-- [x] All the external tools are now inherited into one place and unnesessary files removed
-- [x] Binary tools are updated to latest available source
-- [x] LG KDZ utilities are updated to support latest firmwares
-- [x] Installation requirements are narrowed down to minimal for playing with this toolkit
-- [x] Recovery Dump is made too
+```
+DumprX v2.0/
+├── dumprx/           # Main CLI entry point
+├── core/             # Core business logic and configuration
+├── downloaders/      # Download modules for different services
+├── extractors/       # Firmware extraction modules
+├── modules/          # Shared utilities and functions
+├── utils/            # Console, git, and integration utilities
+└── bin/              # External binary tools
+```
 
-## Recommendations before Playing with Firmware Dumper
+## Installation
 
-This toolkit can run in any Debian/Ubuntu distribution, Ubuntu Bionic and Focal would be best, other versions are not tested.
+### Prerequisites
 
-Support for Alpine Linux is added and tested. You can give it a try.
+- Python 3.8 or higher
+- System dependencies (automatically installed via setup script)
 
-For any other UNIX Distributions, please refer to internal [Setup File](setup.sh) and install the required programs via their own package manager.
+### Quick Setup
 
-## Prepare toolkit dependencies / requirements
+```bash
+# Clone the repository
+git clone https://github.com/Eduardob3677/DumprX.git
+cd DumprX
 
-To prepare for this toolkit, run [Setup File](setup.sh) at first, which is needed only one time. After that, run [Main Script](dumper.sh) with proper argument.
+# Run setup script (installs system dependencies and Python package)
+./setup.sh
+
+# Or install manually
+pip install -e .
+```
 
 ## Usage
 
-Run this toolkit with proper firmware file/folder path or URL
+### Basic Firmware Dumping
 
 ```bash
-./dumper.sh 'Firmware File/Extracted Folder -OR- Supported Website Link'
+# Dump firmware from file
+dumprx dump /path/to/firmware.zip
+
+# Dump firmware from URL
+dumprx dump 'https://example.com/firmware.zip'
+
+# Dump with custom output directory
+dumprx dump firmware.zip -o my_output
 ```
 
-Help Context:
+### Download Only
 
-```text
-  >> Supported Websites:
-        1. Directly Accessible Download Link From Any Website
-        2. Filehosters like - mega.nz | mediafire | gdrive | onedrive | androidfilehost
+```bash
+# Download from various sources
+dumprx download 'https://mega.nz/file/...'
+dumprx download 'https://drive.google.com/file/...'
+dumprx download 'https://mediafire.com/file/...'
+```
+
+### Configuration Management
+
+```bash
+# Show current configuration
+dumprx config show
+
+# Set configuration values
+dumprx config set device.brand "Samsung"
+dumprx config set device.codename "SM-G998B"
+dumprx config set git.auto_push true
+```
+
+### System Dump with Configuration
+
+```bash
+# Advanced system dump with config variables
+dumprx system-dump \
+  --config-vars '{"device.brand": "Samsung", "device.codename": "galaxy_s21"}' \
+  --firmware-url 'https://example.com/firmware.zip'
+```
+
+### Setup Dependencies
+
+```bash
+# Setup external tools and dependencies
+dumprx setup
+```
+
+## Supported Formats
+
+DumprX v2.0 supports all formats from the original version:
+
+### Archive Formats
+- ZIP, RAR, 7Z, TAR, TAR.GZ, TGZ, TAR.MD5
+
+### Firmware Formats
+- **OZIP/OFP/OPS** (OPPO/OnePlus)
+- **KDZ** (LG)
+- **UPDATE.APP** (Huawei)
+- **Payload.bin** (Android OTA)
+- **Super Images** (Android Dynamic Partitions)
+- **SDAT** (Android Sparse Data)
+- **PAC** (Spreadtrum)
+- **RUU** (HTC)
+- **NB0** (Nokia)
+- **SIN** (Sony)
+
+### Download Sources
+- **Mega.nz**
+- **MediaFire**
+- **Google Drive**
+- **AndroidFileHost**
+- **WeTransfer**
+- **Direct HTTP/HTTPS links**
+
+## Configuration
+
+Configuration is stored in `~/.dumprx/config.yaml` and includes:
+
+```yaml
+# Device Information
+device:
+  brand: "Samsung"
+  codename: "SM-G998B"
+  platform: "snapdragon"
+  release: "13"
+  treble_support: true
+  is_ab: true
+
+# Git Integration
+git:
+  auto_push: false
+  organization: "your-github-org"
+  user_name: "Your Name"
+  user_email: "your@email.com"
+
+# Telegram Notifications
+telegram:
+  enabled: false
+  token: "your-bot-token"
+  chat_id: "@YourChannel"
+```
+
+## Development
+
+### Project Structure
+
+- **Core Modules**:
+  - `core/dumper.py` - Main firmware processing pipeline
+  - `core/config.py` - Configuration management
+  - `core/setup.py` - Dependency setup
+
+- **Downloaders**:
+  - `downloaders/mega.py` - Mega.nz downloader
+  - `downloaders/mediafire.py` - MediaFire downloader
+  - `downloaders/gdrive.py` - Google Drive downloader
+  - `downloaders/afh.py` - AndroidFileHost downloader
+
+- **Extractors**:
+  - `extractors/kdz.py` - LG KDZ extractor
+  - `extractors/update_app.py` - Huawei UPDATE.APP extractor
+  - `extractors/ozip.py` - OPPO OZIP extractor
+  - And many more...
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## Migration from v1.x
+
+If you were using the bash version of DumprX:
+
+1. Your existing `out/` directories remain compatible
+2. Configuration needs to be migrated to the new YAML format
+3. All functionality is preserved and enhanced
+4. Binary tools are automatically managed
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Python Dependencies**: Run `./setup.sh` to install all dependencies
+2. **Binary Tools**: External tools are automatically cloned and managed
+3. **Permissions**: Ensure you have write permissions in the working directory
+
+### Getting Help
+
+- Check the configuration: `dumprx config show`
+- Use verbose output: Add `-v` flag to commands
+- Review logs in the output directory
+
+## Credits
+
+- Based on the original DumprX bash version
+- Incorporates tools from AndroidDumps and various firmware extraction projects
+- Built with modern Python libraries: Click, Rich, PyYAML, GitPython
          >> Must Wrap Website Link Inside Single-quotes ('')
   >> Supported File Formats For Direct Operation:
          *.zip | *.rar | *.7z | *.tar | *.tar.gz | *.tgz | *.tar.md5

@@ -8,8 +8,8 @@ from urllib.parse import urlparse
 
 from downloaders.manager import DownloadManager
 from extractors.manager import ExtractorManager
-from utils.git import GitManager
-from utils.device import DeviceTreeGenerator
+from modules.git import GitManager
+from modules.device import DeviceTreeGenerator
 from modules.file_utils import FileUtils
 
 console = Console()
