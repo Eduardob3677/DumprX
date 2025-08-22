@@ -1,10 +1,76 @@
 <div align="center">
 
-  <h1>DumprX</h1>
+  <h1>DumprX v2.0</h1>
 
-  <h4>Based Upon Phoenix Firmware Dumper from DroidDumps, with some Changes and Improvements</h4>
+  <h4>Modern Python Firmware Dumping Toolkit with CLI Interface</h4>
+  <h5>Based Upon Phoenix Firmware Dumper from DroidDumps, with Complete Python Rewrite</h5>
 
 </div>
+
+## 🚀 What's New in v2.0
+
+DumprX v2.0 is a **complete rewrite** from bash to modern Python with:
+
+- ✨ **Rich CLI Interface** - Beautiful console output with colors, progress bars, and emojis
+- 🏗️ **Modular Architecture** - Clean, maintainable code structure with proper separation of concerns
+- 📦 **Python Package** - Install via pip with proper dependency management
+- 🔧 **Auto-Detection** - Automatic device configuration and partition detection
+- 🎯 **Click Framework** - Professional command-line interface with proper help and options
+- ⚡ **Enhanced Performance** - Better error handling and progress tracking
+- 🔄 **Backward Compatibility** - Works with existing scripts through compatibility wrappers
+
+## Installation
+
+### Quick Setup
+```bash
+# Clone the repository
+git clone https://github.com/Eduardob3677/DumprX.git
+cd DumprX
+
+# Run setup script (installs system dependencies and Python package)
+./setup.sh
+
+# Start using DumprX
+dumprx --help
+```
+
+### Manual Installation
+```bash
+# Install system dependencies (Ubuntu/Debian)
+sudo apt install -y python3 python3-pip python3-venv unrar p7zip-full
+
+# Install Python package
+pip install -e .
+
+# Use DumprX
+dumprx 'firmware_file_or_url'
+```
+
+## Usage
+
+### New Python CLI
+```bash
+# Extract firmware
+dumprx firmware.zip
+
+# Download and extract from URL
+dumprx 'https://example.com/firmware.zip'
+
+# Extract with custom output directory
+dumprx firmware.zip -o /path/to/output
+
+# Show version
+dumprx --version
+
+# Show help
+dumprx --help
+```
+
+### Legacy Compatibility
+```bash
+# Old bash interface still works
+./dumper.sh firmware.zip
+```
 
 
 ## What this really is
@@ -34,13 +100,15 @@ For any other UNIX Distributions, please refer to internal [Setup File](setup.sh
 
 To prepare for this toolkit, run [Setup File](setup.sh) at first, which is needed only one time. After that, run [Main Script](dumper.sh) with proper argument.
 
-## Usage
+## Legacy Usage (v1.x)
 
-Run this toolkit with proper firmware file/folder path or URL
+The original bash interface is still supported for compatibility:
 
 ```bash
 ./dumper.sh 'Firmware File/Extracted Folder -OR- Supported Website Link'
 ```
+
+**Note**: The new Python CLI (`dumprx` command) is recommended for all new usage.
 
 Help Context:
 
