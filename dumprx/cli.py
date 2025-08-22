@@ -7,6 +7,7 @@ from rich.panel import Panel
 from dumprx.core.config import Config
 from dumprx.core.device import DeviceInfo
 from dumprx.utils.console import banner, console
+from dumprx.utils.telegram import TelegramNotifier
 from dumprx.downloaders.manager import DownloadManager
 from dumprx.extractors.manager import ExtractionManager
 
@@ -28,16 +29,42 @@ def extract(input_path, output, config):
     
     download_manager = DownloadManager(config_manager)
     extraction_manager = ExtractionManager(config_manager)
+    telegram = TelegramNotifier(config_manager)
     
     console.print(f"[blue]Processing: {input_path}[/blue]")
     
-    if input_path.startswith(('http://', 'https://', 'ftp://')):
-        local_path = download_manager.download(input_path)
-    else:
-        local_path = input_path
-    
-    extraction_manager.extract(local_path, output)
-    console.print("[green]Extraction completed successfully![/green]")
+    try:
+        # Send start notification
+        firmware_info = {
+            'filename': input_path,
+            'device_name': 'Unknown',
+            'start_time': 'Now'
+        }
+        telegram.send_extraction_start(firmware_info)
+        
+        if input_path.startswith(('http://', 'https://', 'ftp://')):
+            local_path = download_manager.download(input_path)
+        else:
+            local_path = input_path
+        
+        extraction_manager.extract(local_path, output)
+        
+        # Send completion notification
+        result_info = {
+            'success': True,
+            'device_name': 'Unknown',
+            'duration': 'Unknown',
+            'partitions_count': 0,
+            'files_count': 0
+        }
+        telegram.send_extraction_complete(result_info)
+        
+        console.print("[green]Extraction completed successfully![/green]")
+        
+    except Exception as e:
+        telegram.send_error(str(e), f"Extracting {input_path}")
+        console.print(f"[red]Extraction failed: {e}[/red]")
+        raise
 
 @cli.command()
 @click.argument('url', required=True)
@@ -81,7 +108,21 @@ def setup():
 def test():
     """Test integrations and dependencies"""
     from dumprx.core.test import run_tests
+    from dumprx.utils.telegram import TelegramNotifier
+    
+    config_manager = Config()
+    telegram = TelegramNotifier(config_manager)
+    
+    # Run standard tests
     run_tests()
+    
+    # Test Telegram if enabled
+    if config_manager.get('telegram.enabled', False):
+        console.print("\n[bold]Testing Telegram Integration:[/bold]")
+        if telegram.test_connection():
+            telegram.send_notification("🧪 DumprX test notification - all systems operational!")
+        else:
+            console.print("[red]Telegram integration test failed[/red]")
 
 @cli.command()
 def version():
