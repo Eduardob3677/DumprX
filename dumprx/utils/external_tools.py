@@ -4,7 +4,7 @@ from pathlib import Path
 
 class ExternalToolsManager:
     def __init__(self, utils_dir, console, verbose=False):
-        self.utils_dir = Path(utils_dir)
+        self.utils_dir = Path(utils_dir).parent / "utils"
         self.console = console
         self.verbose = verbose
         

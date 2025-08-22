@@ -35,4 +35,8 @@ utils/oppo_*
 utils/vmlinux*
 utils/android_tools/
 utils/pacextractor/
+dumprx/utils/oppo_*
+dumprx/utils/vmlinux*
+dumprx/utils/android_tools/
+dumprx/utils/pacextractor/
 test_firmware.zip
