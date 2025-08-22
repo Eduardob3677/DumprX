@@ -13,3 +13,21 @@ out/
 __pycache__
 utils/oppo_*
 utils/vmlinux*
+
+# Python package artifacts
+dumprx/
+*.egg-info/
+build/
+dist/
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.tox/
+*.log
