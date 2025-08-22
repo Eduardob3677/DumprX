@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dumprx"
+version = "2.0.0"
+description = "Modern firmware dumping toolkit with CLI interface"
+authors = [{name = "DumprX Team"}]
+license = {text = "Apache-2.0"}
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "requests>=2.25.0",
+    "humanize>=4.0.0",
+    "clint>=0.5.1",
+]
+
+[project.scripts]
+dumprx = "dumprx.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=22.0.0",
+    "flake8>=4.0.0",
+]
+
+[tool.hatchling.build.targets.wheel]
+packages = ["dumprx"]
