@@ -111,21 +111,12 @@ class DownloaderManager:
     
     def _download_afh(self, url, output_dir):
         self.console.print("[blue]📥 Downloading from AndroidFileHost...[/blue]")
+        from dumprx.downloaders.afh_downloader import download_afh
+        
         try:
-            utils_dir = Path(__file__).parent.parent.parent / "utils"
-            afh_script = utils_dir / "downloaders" / "afh_dl.py"
-            
-            if afh_script.exists():
-                result = subprocess.run([
-                    "python3", str(afh_script), "-l", url
-                ], cwd=output_dir, capture_output=True, text=True)
-                
-                if result.returncode == 0:
-                    downloaded_files = list(output_dir.glob("*"))
-                    if downloaded_files:
-                        return downloaded_files[0]
-                else:
-                    self.console.print(f"[red]❌ AFH download failed: {result.stderr}[/red]")
+            result = download_afh(url, output_dir, self.console)
+            if result:
+                return result
             
             return self._download_direct(url, output_dir)
             

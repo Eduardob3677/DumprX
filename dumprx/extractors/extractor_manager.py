@@ -254,14 +254,12 @@ class ExtractorManager:
             return self._try_generic_extraction(filepath, extract_dir)
     
     def _extract_update_app(self, filepath, extract_dir):
+        from dumprx.extractors.update_app_extractor import extract_update_app
+        
         try:
-            splituapp_script = self.utils_dir / "splituapp.py"
             if splituapp_script.exists():
-                result = subprocess.run([
-                    "python3", str(splituapp_script), "-f", str(filepath)
-                ], cwd=extract_dir, capture_output=True, text=True)
-                
-                if result.returncode == 0:
+                result = extract_update_app(str(filepath), str(extract_dir))
+                if result:
                     return extract_dir
             
             return None
@@ -361,19 +359,16 @@ class ExtractorManager:
                 self.console.print(f"[yellow]Image processing error: {str(e)}[/yellow]")
     
     def convert_sparse_data(self, sparse_file, partition_name):
+        from dumprx.extractors.sdat2img import convert_sdat_to_img
+        
         try:
-            sdat2img_script = self.utils_dir / "sdat2img.py"
             if sdat2img_script.exists():
                 transfer_list = sparse_file.parent / f"{partition_name}.transfer.list"
                 output_img = sparse_file.parent / f"{partition_name}.img"
                 
                 if transfer_list.exists():
-                    result = subprocess.run([
-                        "python3", str(sdat2img_script), str(transfer_list), str(sparse_file), str(output_img)
-                    ], capture_output=True, text=True)
-                    
-                    if result.returncode == 0:
-                        self.console.print(f"[green]✅ Converted sparse data: {output_img}[/green]")
+                    convert_sdat_to_img(str(transfer_list), str(sparse_file), str(output_img))
+                    self.console.print(f"[green]✅ Converted sparse data: {output_img}[/green]")
         except Exception as e:
             if self.verbose:
                 self.console.print(f"[yellow]Sparse data conversion error: {str(e)}[/yellow]")
