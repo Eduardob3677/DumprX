@@ -10,6 +10,9 @@ from dumprx.utils.files import (
     get_file_type, is_url, safe_move, safe_copy, run_command, 
     extract_with_7z, calculate_sha1
 )
+from dumprx.utils.downloaders import FileDownloader
+from dumprx.device.detector import DeviceDetector
+from dumprx.utils.boot_unpacker import BootImageUnpacker
 
 
 class FirmwareExtractor:
@@ -18,6 +21,9 @@ class FirmwareExtractor:
         self.console = console
         self.verbose = verbose
         self.tools = config.get_tool_paths()
+        self.downloader = FileDownloader(console)
+        self.device_detector = DeviceDetector()
+        self.boot_unpacker = BootImageUnpacker(console)
     
     def extract(self, firmware_path: str) -> bool:
         if is_url(firmware_path):
@@ -27,7 +33,7 @@ class FirmwareExtractor:
     
     def _extract_from_url(self, url: str) -> bool:
         self.console.print(f"[blue]Downloading from URL: {url}[/blue]")
-        downloaded_file = self._download_firmware(url)
+        downloaded_file = self.downloader.download(url, self.config.input_dir)
         if not downloaded_file:
             return False
         return self._extract_from_file(str(downloaded_file))
@@ -57,6 +63,10 @@ class FirmwareExtractor:
             return self._extract_ota_payload(firmware_path)
         elif file_type == "system_image":
             return self._process_system_image(firmware_path)
+        elif file_type == "huawei_update":
+            return self._extract_huawei_update(firmware_path)
+        elif file_type == "htc_ruu":
+            return self._extract_htc_ruu(firmware_path)
         else:
             self.console.print(f"[yellow]Warning: Unknown file type, trying generic extraction[/yellow]")
             return self._extract_generic(firmware_path)
@@ -216,7 +226,8 @@ class FirmwareExtractor:
                 self._process_partition(partition)
                 progress.advance(task, 100 / len(self.config.partitions))
         
-        self._generate_file_lists()
+        self._generate_device_trees()
+        self._generate_proprietary_files()
         return True
     
     def _process_partition(self, partition: str) -> None:
@@ -250,14 +261,164 @@ class FirmwareExtractor:
         with open(all_files_txt, "w") as f:
             f.write("\n".join(all_files))
     
-    def _download_firmware(self, url: str) -> Optional[Path]:
-        self.console.print(f"[yellow]URL download not yet implemented: {url}[/yellow]")
-        return None
+    def _extract_huawei_update(self, update_path: Path) -> bool:
+        self.console.print("[blue]Processing Huawei UPDATE.APP[/blue]")
+        
+        dest_path = self.config.tmp_dir / update_path.name
+        safe_copy(update_path, dest_path)
+        
+        os.chdir(self.config.tmp_dir)
+        
+        success, _ = run_command([
+            "python3", str(self.tools["splituapp"]),
+            "-f", dest_path.name
+        ])
+        
+        return success and self._process_extracted_files()
+    
+    def _extract_htc_ruu(self, ruu_path: Path) -> bool:
+        self.console.print("[blue]Processing HTC RUU[/blue]")
+        
+        dest_path = self.config.tmp_dir / ruu_path.name
+        safe_copy(ruu_path, dest_path)
+        
+        os.chdir(self.config.tmp_dir)
+        
+        success, _ = run_command([
+            str(self.tools["ruudecrypt"]), "-s", dest_path.name
+        ])
+        
+        return success and self._process_extracted_files()
+    
+    def _generate_device_trees(self) -> None:
+        self.console.print("[blue]Generating device trees...[/blue]")
+        
+        os.chdir(self.config.out_dir)
+        
+        device_info = self.device_detector.detect_from_firmware(self.config.out_dir)
+        
+        if device_info.get('treble_support') == 'true':
+            self._generate_aosp_device_tree()
+        
+        self._generate_twrp_device_tree()
+    
+    def _generate_aosp_device_tree(self) -> None:
+        aospdtout = "aosp-device-tree"
+        aospdtout_path = self.config.out_dir / aospdtout
+        aospdtout_path.mkdir(exist_ok=True)
+        
+        success, _ = run_command([
+            "uvx", "-p", "3.9", "aospdtgen", str(self.config.out_dir), "-o", aospdtout
+        ])
+        
+        if success:
+            self.console.print("[green]✓ AOSP device tree generated[/green]")
+    
+    def _generate_twrp_device_tree(self) -> None:
+        twrpdtout = "twrp-device-tree"
+        twrpdtout_path = self.config.out_dir / twrpdtout
+        twrpdtout_path.mkdir(exist_ok=True)
+        
+        # Determine which image to use for TWRP generation
+        if (self.config.out_dir / "recovery.img").exists():
+            twrpimg = "recovery.img"
+        elif (self.config.out_dir / "boot.img").exists():
+            twrpimg = "boot.img"
+        else:
+            self.console.print("[yellow]No suitable image found for TWRP device tree[/yellow]")
+            return
+        
+        success, _ = run_command([
+            "uvx", "-p", "3.9", "--from", "git+https://github.com/twrpdtgen/twrpdtgen@master",
+            "twrpdtgen", twrpimg, "-o", twrpdtout
+        ])
+        
+        if success:
+            self.console.print("[green]✓ TWRP device tree generated[/green]")
+            
+            # Extract boot image for analysis
+            boot_img_path = self.config.out_dir / twrpimg
+            if boot_img_path.exists():
+                boot_extract_dir = self.config.out_dir / "bootRE"
+                self.boot_unpacker.unpack(boot_img_path, boot_extract_dir)
+    
+    def _generate_proprietary_files(self) -> None:
+        self.console.print("[blue]Generating proprietary files list...[/blue]")
+        
+        os.chdir(self.config.out_dir)
+        
+        # Generate proprietary-files.txt
+        success, _ = run_command([
+            "bash", str(self.tools["utils"] / "android_tools/tools/proprietary-files.sh"),
+            str(self.config.out_dir / "all_files.txt")
+        ], capture_output=False)
+        
+        if success:
+            proprietary_files = self.config.out_dir / "proprietary-files.txt"
+            android_tools_proprietary = self.config.utils_dir / "android_tools/working/proprietary-files.txt"
+            
+            if android_tools_proprietary.exists():
+                with open(proprietary_files, "w") as f:
+                    f.write(f"# All blobs from extracted firmware, unless pinned\n")
+                
+                with open(android_tools_proprietary, "r") as src:
+                    with open(proprietary_files, "a") as dst:
+                        dst.write(src.read())
+                
+                # Generate SHA1 version
+                self._generate_proprietary_files_sha1()
+    
+    def _generate_proprietary_files_sha1(self) -> None:
+        proprietary_files = self.config.out_dir / "proprietary-files.txt"
+        proprietary_files_sha1 = self.config.out_dir / "proprietary-files.sha1"
+        
+        if not proprietary_files.exists():
+            return
+        
+        with open(proprietary_files_sha1, "w") as f:
+            f.write("# All blobs are from extracted firmware and are pinned with sha1sum values\n")
+        
+        with open(proprietary_files, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    blob_path = self.config.out_dir / line
+                    if blob_path.exists():
+                        sha1 = calculate_sha1(blob_path)
+                        with open(proprietary_files_sha1, "a") as sha1_f:
+                            sha1_f.write(f"{line}|{sha1}\n")
     
     def _extract_ofp(self, ofp_path: Path) -> bool:
-        self.console.print("[yellow]OFP extraction not yet implemented[/yellow]")
-        return False
+        self.console.print("[blue]Processing OFP firmware[/blue]")
+        
+        dest_path = self.config.tmp_dir / ofp_path.name
+        safe_copy(ofp_path, dest_path)
+        
+        os.chdir(self.config.tmp_dir)
+        
+        # Try QC decrypt first
+        success, _ = run_command([
+            "python3", str(self.tools["ofp_qc_decrypt"]), dest_path.name
+        ])
+        
+        if not success:
+            # Try MTK decrypt
+            success, _ = run_command([
+                "python3", str(self.tools["ofp_mtk_decrypt"]), dest_path.name
+            ])
+        
+        return success and self._process_extracted_files()
     
     def _extract_ops(self, ops_path: Path) -> bool:
-        self.console.print("[yellow]OPS extraction not yet implemented[/yellow]")
-        return False
+        self.console.print("[blue]Processing OPS firmware[/blue]")
+        
+        dest_path = self.config.tmp_dir / ops_path.name
+        safe_copy(ops_path, dest_path)
+        
+        os.chdir(self.config.tmp_dir)
+        
+        success, _ = run_command([
+            "python3", str(self.tools["opsdecrypt"]), dest_path.name
+        ])
+        
+        return success and self._process_extracted_files()
