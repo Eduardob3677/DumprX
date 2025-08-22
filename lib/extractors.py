@@ -5,6 +5,7 @@ from typing import Optional, List, Dict, Any, Union
 from abc import ABC, abstractmethod
 from .ui import UI
 from .config import config
+from .boot_extractor import BootImageExtractor
 
 class BaseExtractor(ABC):
     def __init__(self, utils_dir: Path):
@@ -227,6 +228,16 @@ class PACExtractor(BaseExtractor):
         cmd = ["python3", str(pac_tool), str(file_path)]
         return await self.run_command(cmd, output_dir)
 
+class BootExtractor(BaseExtractor):
+    async def can_extract(self, file_path: Path) -> bool:
+        return file_path.name in ['boot.img', 'recovery.img', 'vendor_boot.img'] or 'boot' in file_path.name.lower()
+    
+    async def extract(self, file_path: Path, output_dir: Path) -> bool:
+        UI.processing("Boot/Recovery image detected")
+        
+        boot_extractor = BootImageExtractor(self.utils_dir)
+        return await boot_extractor.extract(file_path, output_dir)
+
 class FirmwareExtractor:
     def __init__(self, utils_dir: Path):
         self.utils_dir = utils_dir
@@ -240,6 +251,7 @@ class FirmwareExtractor:
             SonyExtractor(utils_dir),
             NB0Extractor(utils_dir),
             PACExtractor(utils_dir),
+            BootExtractor(utils_dir),
             ArchiveExtractor(utils_dir)
         ]
     

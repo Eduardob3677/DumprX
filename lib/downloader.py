@@ -8,6 +8,7 @@ import subprocess
 import shutil
 from .ui import UI
 from .config import config
+from .downloaders.specialized import MegaDownloader, MediaFireDownloader, GoogleDriveDownloader
 
 class Downloader:
     def __init__(self):
@@ -65,26 +66,16 @@ class Downloader:
         return "/we.tl/" in url
     
     async def _download_mega(self, url: str, output_path: Path) -> Optional[Path]:
-        UI.processing("Downloading from MEGA...")
-        script_path = Path("utils/downloaders/mega-media-drive_dl.sh")
-        if not script_path.exists():
-            UI.error("MEGA downloader script not found")
-            return None
-        
-        try:
-            process = await asyncio.create_subprocess_exec(
-                str(script_path), url,
-                cwd=str(output_path),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            await process.communicate()
-            
-            files = list(output_path.glob("*"))
-            return files[0] if files else None
-        except Exception as e:
-            UI.error(f"MEGA download failed: {e}")
-            return None
+        downloader = MegaDownloader()
+        return await downloader.download(url, output_path)
+    
+    async def _download_mediafire(self, url: str, output_path: Path) -> Optional[Path]:
+        downloader = MediaFireDownloader()
+        return await downloader.download(url, output_path)
+    
+    async def _download_gdrive(self, url: str, output_path: Path) -> Optional[Path]:
+        downloader = GoogleDriveDownloader()
+        return await downloader.download(url, output_path)
     
     async def _download_afh(self, url: str, output_path: Path) -> Optional[Path]:
         UI.processing("Downloading from AndroidFileHost...")
@@ -137,23 +128,12 @@ class Downloader:
         return await self._download_with_script(url, output_path, "Google Drive")
     
     async def _download_with_script(self, url: str, output_path: Path, service: str) -> Optional[Path]:
-        UI.processing(f"Downloading from {service}...")
-        script_path = Path("utils/downloaders/mega-media-drive_dl.sh")
-        
-        try:
-            process = await asyncio.create_subprocess_exec(
-                str(script_path), url,
-                cwd=str(output_path),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            await process.communicate()
-            
-            files = list(output_path.glob("*"))
-            return files[0] if files else None
-        except Exception as e:
-            UI.error(f"{service} download failed: {e}")
-            return None
+        if service == "MediaFire":
+            return await self._download_mediafire(url, output_path)
+        elif service == "Google Drive":
+            return await self._download_gdrive(url, output_path)
+        else:
+            return await self._download_mega(url, output_path)
     
     async def _download_direct(self, url: str, output_path: Path) -> Optional[Path]:
         UI.processing("Downloading file...")
