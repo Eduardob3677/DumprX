@@ -25,5 +25,8 @@ dist/
 *.swo
 .DS_Store
 Thumbs.db
-bin/oppo_*
-bin/vmlinux*
+bin/android_tools/
+bin/oppo_decrypt/
+bin/oppo_ozip_decrypt/
+bin/pacextractor/
+bin/vmlinux-to-elf/

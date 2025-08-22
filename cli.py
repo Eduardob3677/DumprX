@@ -11,7 +11,7 @@ from modules.banner import display_banner
 
 
 @click.group()
-@click.version_option()
+@click.version_option(version="2.0.0")
 @click.pass_context
 def cli(ctx):
     ctx.ensure_object(dict)
