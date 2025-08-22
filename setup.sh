@@ -88,8 +88,49 @@ echo -e ${BLUE}">> Installing uv for python packages..."${NORMAL}
 sleep 1
 bash -c "$(curl -sL https://astral.sh/uv/install.sh)" || abort "Setup Failed!"
 
+# Install Python dependencies
+echo -e ${BLUE}">> Installing Python dependencies..."${NORMAL}
+sleep 1
+
+if command -v uv > /dev/null 2>&1; then
+    export PATH="${HOME}/.local/bin:${PATH}"
+    uv init --no-readme --python 3.11 || true
+    
+    cat > pyproject.toml << 'EOF'
+[project]
+name = "dumprx"
+version = "2.0.0"
+description = "Modern firmware extraction toolkit"
+requires-python = ">=3.8"
+dependencies = [
+    "aiohttp",
+    "aiofiles", 
+    "PyYAML",
+    "rich",
+    "click",
+    "tqdm"
+]
+
+[tool.uv]
+dev-dependencies = []
+EOF
+    
+    uv sync || abort "Python dependency installation failed!"
+else
+    echo -e ${RED}"uv installation failed, falling back to pip"${NORMAL}
+    pip3 install aiohttp aiofiles PyYAML rich click tqdm || abort "Python dependency installation failed!"
+fi
+
+# Create Python dependencies directory
+echo -e ${BLUE}">> Setting up project structure..."${NORMAL}
+sleep 1
+
+# Make main script executable
+chmod +x dumprx.py 2>/dev/null || true
+
 # Done!
 echo -e ${GREEN}"Setup Complete!"${NORMAL}
+echo -e ${GREEN}"You can now run: ./dumprx.py <firmware_file_or_url>"${NORMAL}
 
 # Exit
 exit 0

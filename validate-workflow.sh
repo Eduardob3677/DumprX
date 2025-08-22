@@ -30,17 +30,41 @@ else
     exit 1
 fi
 
-# Check dumper script
-echo "3. Checking dumper script..."
-if [[ -f "dumper.sh" && -x "dumper.sh" ]]; then
-    echo "✅ Dumper script exists and is executable"
+# Check main script
+echo "3. Checking main script..."
+if [[ -f "dumprx.py" && -x "dumprx.py" ]]; then
+    echo "✅ Main Python script exists and is executable"
 else
-    echo "❌ Dumper script not found or not executable"
+    echo "❌ Main Python script not found or not executable"
+    exit 1
+fi
+
+# Check Python dependencies
+echo "4. Checking Python dependencies..."
+if [[ -f "requirements.txt" ]]; then
+    echo "✅ Requirements file exists"
+    if python3 -c "import aiohttp, aiofiles, yaml" 2>/dev/null; then
+        echo "✅ Required Python packages are available"
+    else
+        echo "❌ Required Python packages not installed"
+        exit 1
+    fi
+else
+    echo "❌ Requirements file not found"
+    exit 1
+fi
+
+# Check modular structure
+echo "5. Checking modular structure..."
+if [[ -d "lib" && -f "lib/__init__.py" && -f "lib/config.py" && -f "lib/extractors.py" ]]; then
+    echo "✅ Modular Python structure exists"
+else
+    echo "❌ Modular Python structure not found"
     exit 1
 fi
 
 # Check Git LFS availability
-echo "4. Checking Git LFS..."
+echo "6. Checking Git LFS..."
 if command -v git-lfs >/dev/null 2>&1; then
     echo "✅ Git LFS is available"
 else
@@ -49,7 +73,7 @@ else
 fi
 
 # Test token file logic
-echo "5. Testing token file logic..."
+echo "7. Testing token file logic..."
 echo "test_token" > .test_token
 if [[ -s .test_token ]]; then
     echo "✅ Token file creation and reading works"
@@ -60,7 +84,7 @@ else
 fi
 
 # Check .gitignore
-echo "6. Checking .gitignore..."
+echo "8. Checking .gitignore..."
 if grep -q "github_token\|gitlab_token" .gitignore; then
     echo "✅ Sensitive files are in .gitignore"
 else
@@ -69,7 +93,7 @@ else
 fi
 
 # Check documentation
-echo "7. Checking documentation..."
+echo "9. Checking documentation..."
 if grep -q "GitHub Actions Workflow Usage" README.md; then
     echo "✅ Workflow documentation exists in README"
 else
