@@ -85,8 +85,10 @@ class Config:
                 console.print(f"[yellow]Warning: Could not load config file: {e}[/yellow]")
                 return self.default_config.copy()
         else:
+            config = self.default_config.copy()
+            self._config = config
             self.save()
-            return self.default_config.copy()
+            return config
     
     def save(self):
         with open(self.config_file, 'w') as f:
