@@ -1,7 +1,27 @@
 #!/bin/bash
 
-# Clear Screen
-tput reset 2>/dev/null || clear
+# DumprX Legacy Compatibility Wrapper
+# This script provides backward compatibility with the original bash interface
+# while redirecting to the new Python CLI
+
+echo "⚠️  Legacy bash script detected. Redirecting to Python CLI v2.0..."
+echo ""
+
+# Check if Python CLI is available
+if [[ ! -f "cli.py" ]]; then
+    echo "❌ Python CLI not found. Please run setup.sh first."
+    exit 1
+fi
+
+# Redirect to Python CLI
+if [[ $# -eq 0 ]]; then
+    python3 cli.py --help
+elif [[ "$1" == "--help" || "$1" == "-h" ]]; then
+    python3 cli.py --help
+else
+    echo "🔄 Executing: python3 cli.py extract '$1'"
+    python3 cli.py extract "$1"
+fi
 
 # Unset Every Variables That We Are Gonna Use Later
 unset PROJECT_DIR INPUTDIR UTILSDIR OUTDIR TMPDIR FILEPATH FILE EXTENSION UNZIP_DIR ArcPath \

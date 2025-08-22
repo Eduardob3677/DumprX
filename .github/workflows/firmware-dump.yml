@@ -103,32 +103,28 @@ jobs:
         
     - name: Setup authentication tokens
       run: |
-        # Create token files based on provider selection
+        # Configure Python CLI with tokens
         if [[ "${{ inputs.git_provider }}" == "github" ]]; then
-          echo "${{ inputs.github_token }}" > .github_token
+          python3 cli.py config set github_token "${{ inputs.github_token }}"
           if [[ -n "${{ inputs.github_orgname }}" ]]; then
-            echo "${{ inputs.github_orgname }}" > .github_orgname
+            python3 cli.py config set git_org "${{ inputs.github_orgname }}"
           fi
-          # Remove GitLab token file if it exists
-          rm -f .gitlab_token
         elif [[ "${{ inputs.git_provider }}" == "gitlab" ]]; then
-          echo "${{ inputs.gitlab_token }}" > .gitlab_token
+          python3 cli.py config set gitlab_token "${{ inputs.gitlab_token }}"
           if [[ -n "${{ inputs.gitlab_group }}" ]]; then
-            echo "${{ inputs.gitlab_group }}" > .gitlab_group
+            python3 cli.py config set git_org "${{ inputs.gitlab_group }}"
           fi
           if [[ -n "${{ inputs.gitlab_instance }}" ]]; then
-            echo "${{ inputs.gitlab_instance }}" > .gitlab_instance
+            python3 cli.py config set gitlab_host "https://${{ inputs.gitlab_instance }}"
           fi
-          # Remove GitHub token file if it exists
-          rm -f .github_token
         fi
         
         # Setup Telegram tokens if provided
         if [[ -n "${{ inputs.telegram_token }}" ]]; then
-          echo "${{ inputs.telegram_token }}" > .tg_token
+          python3 cli.py config set telegram_token "${{ inputs.telegram_token }}"
         fi
         if [[ -n "${{ inputs.telegram_chat_id }}" ]]; then
-          echo "${{ inputs.telegram_chat_id }}" > .tg_chat
+          python3 cli.py config set telegram_chat "${{ inputs.telegram_chat_id }}"
         fi
         
     - name: Set PUSH_TO_GITLAB environment variable
@@ -141,13 +137,14 @@ jobs:
         
     - name: Run firmware dumper
       run: |
-        chmod +x dumper.sh
-        ./dumper.sh '${{ inputs.firmware_url }}'
+        echo "Using DumprX Python CLI v2.0"
+        python3 cli.py extract '${{ inputs.firmware_url }}'
         
     - name: Cleanup sensitive files
       if: always()
       run: |
-        rm -f .github_token .gitlab_token .tg_token .tg_chat .github_orgname .gitlab_group .gitlab_instance
+        # Cleanup config file with sensitive data
+        rm -f ~/.dumprx/config.yml
         
     - name: Upload artifacts on failure
       if: failure()
