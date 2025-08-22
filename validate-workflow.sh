@@ -30,12 +30,18 @@ else
     exit 1
 fi
 
-# Check dumper script
-echo "3. Checking dumper script..."
-if [[ -f "dumper.sh" && -x "dumper.sh" ]]; then
-    echo "✅ Dumper script exists and is executable"
+# Check dumper CLI
+echo "3. Checking dumper CLI..."
+if [[ -f "cli.py" ]]; then
+    echo "✅ Python CLI exists"
+    if python3 cli.py --help >/dev/null 2>&1; then
+        echo "✅ Python CLI is functional"
+    else
+        echo "❌ Python CLI not working"
+        exit 1
+    fi
 else
-    echo "❌ Dumper script not found or not executable"
+    echo "❌ Python CLI not found"
     exit 1
 fi
 
@@ -48,28 +54,42 @@ else
     exit 1
 fi
 
-# Test token file logic
-echo "5. Testing token file logic..."
-echo "test_token" > .test_token
-if [[ -s .test_token ]]; then
-    echo "✅ Token file creation and reading works"
-    rm -f .test_token
+# Test CLI functionality
+echo "5. Testing CLI functionality..."
+if python3 cli.py config show >/dev/null 2>&1; then
+    echo "✅ CLI configuration system works"
 else
-    echo "❌ Token file logic failed"
+    echo "❌ CLI configuration failed"
     exit 1
 fi
 
-# Check .gitignore
-echo "6. Checking .gitignore..."
-if grep -q "github_token\|gitlab_token" .gitignore; then
+if python3 cli.py test >/dev/null 2>&1; then
+    echo "✅ CLI integration tests pass"
+else
+    echo "❌ CLI integration tests failed"
+    exit 1
+fi
+
+# Check dependencies
+echo "6. Checking Python dependencies..."
+if python3 -c "import click, rich, yaml, requests" 2>/dev/null; then
+    echo "✅ Python dependencies are installed"
+else
+    echo "❌ Python dependencies missing"
+    exit 1
+fi
+
+# Check .gitignore  
+echo "7. Checking .gitignore..."
+if grep -q "config.yml\\|__pycache__" .gitignore; then
     echo "✅ Sensitive files are in .gitignore"
 else
-    echo "❌ Token files not properly ignored"
+    echo "❌ Sensitive files not properly ignored"
     exit 1
 fi
 
 # Check documentation
-echo "7. Checking documentation..."
+echo "8. Checking documentation..."
 if grep -q "GitHub Actions Workflow Usage" README.md; then
     echo "✅ Workflow documentation exists in README"
 else
