@@ -1,0 +1,2 @@
+SuperImageExtractor = None
+PayloadExtractor = None

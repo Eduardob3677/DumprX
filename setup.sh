@@ -88,8 +88,27 @@ echo -e ${BLUE}">> Installing uv for python packages..."${NORMAL}
 sleep 1
 bash -c "$(curl -sL https://astral.sh/uv/install.sh)" || abort "Setup Failed!"
 
+# Install Python dependencies
+echo -e ${BLUE}">> Installing Python dependencies..."${NORMAL}
+sleep 1
+if command -v pip3 > /dev/null 2>&1; then
+    pip3 install -r requirements.txt || abort "Python dependencies installation failed!"
+else
+    pip install -r requirements.txt || abort "Python dependencies installation failed!"
+fi
+
+# Install DumprX as package
+echo -e ${BLUE}">> Installing DumprX package..."${NORMAL}
+sleep 1
+if command -v pip3 > /dev/null 2>&1; then
+    pip3 install -e . || abort "DumprX package installation failed!"
+else
+    pip install -e . || abort "DumprX package installation failed!"
+fi
+
 # Done!
 echo -e ${GREEN}"Setup Complete!"${NORMAL}
+echo -e ${GREEN}"You can now use 'dumprx' command or 'python3 cli.py'"${NORMAL}
 
 # Exit
 exit 0
