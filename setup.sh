@@ -35,6 +35,20 @@ printf "\e[32m" && __bannerTop && printf "\e[0m"
 # Minor Sleep
 sleep 1
 
+echo -e ${BLUE}">> Setting up DumprX Python environment..."${NORMAL}
+sleep 1
+
+# Check if Python 3.8+ is available
+if ! python3 -c "import sys; assert sys.version_info >= (3, 8)" 2>/dev/null; then
+    echo -e ${RED}"Python 3.8 or higher is required!"${NORMAL}
+    abort "Setup Failed!"
+fi
+
+# Install Python package in development mode
+echo -e ${BLUE}">> Installing DumprX Python package..."${NORMAL}
+pip3 install --user -e . || abort "Python package installation failed!"
+
+# Install system dependencies
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 
     if command -v apt > /dev/null 2>&1; then

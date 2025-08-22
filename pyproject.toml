@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dumprx"
+version = "2.0.0"
+description = "Modern Python firmware dumper with CLI interface"
+authors = [{name = "DumprX Team"}]
+license = {text = "GPL-3.0"}
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "pyyaml>=6.0",
+    "requests>=2.28.0",
+    "gitpython>=3.1.0",
+    "humanize>=4.0.0",
+    "clint>=0.5.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "isort",
+    "flake8",
+]
+
+[project.scripts]
+dumprx = "dumprx.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dumprx*", "core*", "downloaders*", "extractors*", "modules*", "utils*"]
+
+[tool.setuptools.package-data]
+"*" = ["bin/*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"

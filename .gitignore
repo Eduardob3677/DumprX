@@ -13,3 +13,40 @@ out/
 __pycache__
 utils/oppo_*
 utils/vmlinux*
+
+# Python artifacts
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# Config and runtime files
+github_token
+gitlab_token
+github_orgname
+tg_token
+tg_chat
+
+# Python development
+.coverage
+.tox/
+.cache/
+.hypothesis/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local development config
+.dumprx/
+config.yaml
